@@ -40,7 +40,7 @@ async def add_ticket(message: types.Message, state: FSMContext):
 @dp.message_handler(commands=['edit'], state=Form.logged_in)
 async def edit_ticket(message: types.Message, state: FSMContext):
     logging.info("{} ".format(message.from_user.id))
-    await generic.not_implemented(message, state)
+    await generic.not_implemented(message.from_user.id)
 
 # UNKNOWN input
 # ===============================================================
