@@ -5,8 +5,8 @@ load_dotenv()
 
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 LOG_FILENAME = os.getenv('LOG_FILENAME')
-DB_FILE = os.getenv('DB_FILE')
-STATE_FILE = os.getenv('STATE_FILE')
+DB_FILE = os.getenv('DB_FILE') + 'db.db'
+STATE_FILE = os.getenv('STATE_FILE') + 'state.json'
 SKIT_BASE_URL = os.getenv('SKIT_BASE_URL')
 
 log_level = os.getenv('LOG_LEVEL').upper()

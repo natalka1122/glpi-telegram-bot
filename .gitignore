@@ -1,16 +1,11 @@
 .env
 
-log.txt
-*.db
+data/ 
 
 __pycache__/
 venv/*
 
 .vscode/*
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
 *.code-workspace
-# Local History for Visual Studio Code
 .history/
 .vscode/settings.json
