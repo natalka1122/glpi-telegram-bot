@@ -1,9 +1,10 @@
+MAX_MESSAGE_LENGTH = 2000
 STATUS = {
     1: 'Новый',
     2: 'В работе'
 }
 
-def show_ticket(ticket, max_len=2000):
+def show_ticket(ticket, max_len=MAX_MESSAGE_LENGTH):
     result = []
     result.append('ID: {}'.format(ticket['id']))
     result.append('Заголовок: {}'.format(ticket['name']))

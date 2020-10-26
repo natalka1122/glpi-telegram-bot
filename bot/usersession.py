@@ -35,3 +35,12 @@ class UserSession:
     def get_all_tickers(self):
         with glpi_api.connect(url=self.URL, auth=(self.login, self.password), apptoken='') as glpi:
             return glpi.get_all_items('ticket')
+    
+    def create_ticket(self, title):
+        with glpi_api.connect(url=self.URL, auth=(self.login, self.password), apptoken='') as glpi:
+            result = glpi.add('ticket', {'name': title})
+        # [{'id': 1309, 'message': 'Объект успешно добавлен: dds'}]
+        if isinstance(result, list) and len(result) == 1 and 'id' in result[0]:
+            return result[0]['id']
+        else:
+            raise StupidError('Failed to add ticket: {}'.format(result))
