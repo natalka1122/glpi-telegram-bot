@@ -32,7 +32,7 @@ class UserSession:
         with glpi_api.connect(url=self.URL, auth=(self.login, self.password), apptoken=''):
             pass
 
-    def get_all_tickers(self):
+    def get_all_tickets(self):
         with glpi_api.connect(url=self.URL, auth=(self.login, self.password), apptoken='') as glpi:
             return glpi.get_all_items('ticket')
     
@@ -44,3 +44,8 @@ class UserSession:
             return result[0]['id']
         else:
             raise StupidError('Failed to add ticket: {}'.format(result))
+    
+    def get_one_ticket(self, ticket_id):
+        with glpi_api.connect(url=self.URL, auth=(self.login, self.password), apptoken='') as glpi:
+            return glpi.get_item('ticket', ticket_id)
+

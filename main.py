@@ -40,12 +40,17 @@ async def add_ticket(message: types.Message, state: FSMContext):
 @dp.message_handler(commands=['edit'], state=Form.logged_in)
 async def edit_ticket(message: types.Message, state: FSMContext):
     logging.info("{} ".format(message.from_user.id))
-    await generic.not_implemented(message.from_user.id)
+    await generic.edit_ticket(message.from_user.id)
 
 @dp.message_handler(state=Form.to_enter_title)
 async def to_enter_title(message: types.Message, state: FSMContext):
     logging.info("{} ".format(message.from_user.id))
     await generic.process_to_enter_title(message.from_user.id, message.text)
+
+@dp.message_handler(state=Form.to_select_ticket_number)
+async def to_select_ticket_number(message: types.Message, state: FSMContext):
+    logging.info("{} ".format(message.from_user.id))
+    await generic.process_to_select_ticket_number(message.from_user.id, message.text)
 
 # UNKNOWN input
 # ===============================================================

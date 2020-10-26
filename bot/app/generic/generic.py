@@ -15,7 +15,7 @@ async def start_message(user_id):
 
 async def list_all_tickets(user_id):
     logging.debug('{} /list command'.format(user_id))
-    list_tickets = UserSession(user_id).get_all_tickers()
+    list_tickets = UserSession(user_id).get_all_tickets()
     if len(list_tickets) == 0:
         await bot.send_message(user_id, 'Нет никаких тикетов')
         return
@@ -33,7 +33,7 @@ async def add_new_ticket(user_id):
     await bot.send_message(user_id, "Введите, пожалуйста, тему обращения")
 
 async def process_to_enter_title(user_id, text):
-    logging.debug('{} /add command'.format(user_id))
+    logging.debug('{} process_to_enter_title'.format(user_id))
 
     try:
         ticket_id = UserSession(user_id).create_ticket(text)
@@ -49,9 +49,48 @@ async def process_to_enter_title(user_id, text):
 
 async def edit_ticket(user_id):
     logging.debug('{} /edit command'.format(user_id))
+    list_tickets = UserSession(user_id).get_all_tickets()
+    if len(list_tickets) == 0:
+        await Form.logged_in.set()
+        await bot.send_message(user_id, 'Нет никаких тикетов')
+        return    
+    
+    for current_ticket in list_tickets:
+        await bot.send_message(user_id, 'Номер: {} Тема: {}'.format(current_ticket['id'], current_ticket['name']))
+
     # Set state
     await Form.to_select_ticket_number.set()
     await bot.send_message(user_id, "Введите, пожалуйста, номер тикета для редактирования")
+
+async def process_to_select_ticket_number(user_id, ticket_id):
+    try:
+        ticket_id = int(ticket_id)
+    except :
+        logging.error("Ну кто вводит буквы вместо циферок: {}".format(ticket_id))
+        await Form.logged_in.set()
+        await bot.send_message(user_id, "Ну кто мне тут вводит буквы вместо циферок? Начинай, хулиган, заново!")
+        return
+        
+    logging.debug('{} process_to_select_ticket_number'.format(user_id))
+    try:
+        ticket = UserSession(user_id).get_one_ticket(ticket_id)
+    except StupidError as e:
+        logging.error("{}".format(e))
+        await Form.logged_in.set()
+        await bot.send_message(user_id, "Ничего не получилось и вылезла ошибка")
+        return
+
+    if ticket is None:
+        logging.error("Not found {}".format(ticket_id))
+        await Form.logged_in.set()
+        await bot.send_message(user_id, "Тикет не найден. Начинайте заново.")
+        return
+    
+    # Set state
+    logging.error("Получилось! {}".format(ticket))
+    await Form.logged_in.set()
+    await bot.send_message(user_id, "Вот ваш тикет: {}. И какое поле в нем мы хотим поменять? ".format(ticket))
+    await not_implemented(user_id)
 
 async def not_implemented(user_id):
     logging.debug('{} not implemented command'.format(user_id))
