@@ -3,8 +3,8 @@ import sys
 import logging
 from aiogram import types
 from bot.app.core import bot, sessions, create_user_session
-
-print("IMPORT bot.app.generic")
+from bot.usersession import UserSession
+from bot.app.ticket import show_ticket
 
 
 async def start_message(user_id):
@@ -14,7 +14,16 @@ async def start_message(user_id):
 
 async def list_all_tickets(user_id):
     logging.debug('{} /list command'.format(user_id))
-    await bot.send_message(user_id, '{} /list command'.format(user_id))
+    list_tickets = UserSession(user_id).get_all_tickers()
+    if len(list_tickets) == 0:
+        await bot.send_message(user_id, 'Нет никаких тикетов')
+        return
+    
+    chunks = []
+    for current_ticket in list_tickets:
+        ticket_to_print = show_ticket(current_ticket)
+        for chunk in ticket_to_print:
+            await bot.send_message(user_id, '{}'.format(chunk))
 
 
 async def not_implemented(user_id):

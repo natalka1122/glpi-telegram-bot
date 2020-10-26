@@ -1,17 +1,11 @@
 import logging
 from aiogram import types
 from aiogram.dispatcher import FSMContext
-from aiogram.dispatcher.filters.state import State, StatesGroup
 import bot.app.core as core
 from bot.usersession import UserSession
 from bot.glpi_api import GLPIError
+from bot.app.state import Form
 
-print("IMPORT bot.app.generic.onboarding")
-
-class Form(StatesGroup):
-    to_enter_login = State()  # Will be represented in storage as 'Form:to_enter_login'
-    to_enter_password = State()  # Will be represented in storage as 'Form:to_enter_password'
-    logged_in = State()  # Will be represented in storage as 'Form:logged_in'
 
 async def onboarding_start(user_id):
     """

@@ -4,7 +4,7 @@ from aiogram.dispatcher import FSMContext
 from aiogram.utils import executor
 from bot.app.core import dp
 from bot.app.generic import generic, onboarding
-from bot.app.generic.onboarding import Form
+from bot.app.state import Form
 
 @dp.message_handler(commands=['start'], state="*")
 async def start_message(message: types.Message):

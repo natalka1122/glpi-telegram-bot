@@ -8,7 +8,6 @@ from aiogram.contrib.fsm_storage.files import JSONStorage
 from bot.db.dbhelper import DBHelper
 from bot.app.generic import onboarding
 
-print("IMPORT bot.app.core")
 
 logging.basicConfig(level=LOG_LEVEL, filename=LOG_FILENAME, format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S', filemode='w')
 
