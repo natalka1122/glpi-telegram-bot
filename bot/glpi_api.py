@@ -14,23 +14,29 @@ from base64 import b64encode
 from contextlib import contextmanager
 import requests
 
-_UPLOAD_MANIFEST = '{{ "input": {{ "name": "{name:s}", "_filename" : ["{filename:s}"] }} }}'
+_UPLOAD_MANIFEST = (
+    '{{ "input": {{ "name": "{name:s}", "_filename" : ["{filename:s}"] }} }}'
+)
 """Manifest when uploading a document passed as JSON in the multipart/form-data POST
 request. Note the double curly is used for representing only one curly."""
 
 _WARN_DEL_DOC = (
     "The file could not be uploaded but a document with id '{:d}' was created, "
-    "this document will be purged.")
+    "this document will be purged."
+)
 """Warning when we need to delete an incomplete document due to upload error."""
 
 _WARN_DEL_ERR = (
-    "The created document could not be purged, you may need to cealn it manually: {:s}")
+    "The created document could not be purged, you may need to cealn it manually: {:s}"
+)
 """Warning when an invalid document could not be purged."""
 
 _FILENAME_RE = re.compile('^filename="(.+)";')
 
+
 class GLPIError(Exception):
     """Exception raised by this module."""
+
 
 @contextmanager
 def connect(url, apptoken, auth, verify_certs=True):
@@ -59,6 +65,7 @@ def connect(url, apptoken, auth, verify_certs=True):
     finally:
         glpi.kill_session()
 
+
 def _raise(msg):
     """Raise ``GLPIError`` exception with ``msg`` message.
 
@@ -69,34 +76,46 @@ def _raise(msg):
     to ``str`` the message.
     """
     if sys.version_info.major < 3:
-        msg = msg.encode('utf-8')
+        msg = msg.encode("utf-8")
     raise GLPIError(msg)
+
 
 def _glpi_error(response):
     """GLPI errors message are returned in a list of two elements. The first
     element is the key of the error and the second the message."""
-    _raise('({}) {}'.format(*response.json()))
+    _raise("({}) {}".format(*response.json()))
+
 
 def _unknown_error(response):
     """Helper for returning a HTTP code and response on non managed status
     code."""
-    _raise('unknown error: [{:d}/{:s}] {:s}'
-           .format(response.status_code, response.reason, response.text))
+    _raise(
+        "unknown error: [{:d}/{:s}] {:s}".format(
+            response.status_code, response.reason, response.text
+        )
+    )
+
 
 def _convert_bools(kwargs):
-    return {key: str(val).lower() if isinstance(val, bool) else val
-            for key, val in kwargs.items()}
+    return {
+        key: str(val).lower() if isinstance(val, bool) else val
+        for key, val in kwargs.items()
+    }
+
 
 def _catch_errors(func):
     """Decorator function for catching communication error
     and raising an exception."""
+
     @wraps(func)
     def wrapper(self, *args, **kwargs):
         try:
             return func(self, *args, **kwargs)
         except requests.exceptions.RequestException as err:
-            raise GLPIError('communication error: {:s}'.format(str(err)))
+            raise GLPIError("communication error: {:s}".format(str(err)))
+
     return wrapper
+
 
 class GLPI:
     """Class for interacting with GLPI using the REST API.
@@ -117,6 +136,7 @@ class GLPI:
                    apptoken='YOURAPPTOKEN',
                    auth=('USERNAME', 'PASSWORD'))
     """
+
     def __init__(self, url, apptoken, auth, verify_certs=True):
         """Connect to GLPI and retrieve session token which is put in a
         ``requests`` session as attribute.
@@ -127,6 +147,7 @@ class GLPI:
         self.session = requests.Session()
         if not verify_certs:
             from requests.packages.urllib3.exceptions import InsecureRequestWarning
+
             requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
             self.session.verify = False
 
@@ -135,9 +156,9 @@ class GLPI:
 
         # Set required headers.
         self.session.headers = {
-            'Content-Type': 'application/json',
-            'Session-Token': session_token,
-            'App-Token': apptoken
+            "Content-Type": "application/json",
+            "Session-Token": session_token,
+            "App-Token": apptoken,
         }
 
         # Use for caching field id/uid map.
@@ -145,7 +166,7 @@ class GLPI:
 
     def _set_method(self, *endpoints):
         """Generate the URL from ``endpoints``."""
-        return '/'.join(str(part) for part in [self.url.strip('/'), *endpoints])
+        return "/".join(str(part) for part in [self.url.strip("/"), *endpoints])
 
     @_catch_errors
     def _init_session(self, apptoken, auth):
@@ -159,24 +180,29 @@ class GLPI:
         # Manage Authorization heade.
         if isinstance(auth, (list, tuple)):
             if len(auth) > 2:
-                raise GLPIError("invalid 'auth' parameter (should contains "
-                                'username and password)')
-            authorization = 'Basic {:s}'.format(b64encode(':'.join(auth).encode()).decode())
+                raise GLPIError(
+                    "invalid 'auth' parameter (should contains "
+                    "username and password)"
+                )
+            authorization = "Basic {:s}".format(
+                b64encode(":".join(auth).encode()).decode()
+            )
         else:
-            authorization = 'user_token {:s}'.format(auth)
+            authorization = "user_token {:s}".format(auth)
 
         init_headers = {
-            'Content-Type': 'application/json',
-            'Authorization': authorization,
-            'App-Token': apptoken
+            "Content-Type": "application/json",
+            "Authorization": authorization,
+            "App-Token": apptoken,
         }
-        response = self.session.get(url=self._set_method('initSession'),
-                                    headers=init_headers)
+        response = self.session.get(
+            url=self._set_method("initSession"), headers=init_headers
+        )
 
         return {
-            200: lambda r: r.json()['session_token'],
+            200: lambda r: r.json()["session_token"],
             400: _glpi_error,
-            401: _glpi_error
+            401: _glpi_error,
         }.get(response.status_code, _unknown_error)(response)
 
     @_catch_errors
@@ -195,12 +221,10 @@ class GLPI:
             ...
             GLPIError: (ERROR_SESSION_TOKEN_INVALID) session_token semble incorrect
         """
-        response = self.session.get(self._set_method('killSession'))
-        {
-            200: lambda r: r.text,
-            400: _glpi_error,
-            401: _glpi_error
-        }.get(response.status_code, _unknown_error)(response)
+        response = self.session.get(self._set_method("killSession"))
+        {200: lambda r: r.text, 400: _glpi_error, 401: _glpi_error}.get(
+            response.status_code, _unknown_error
+        )(response)
 
     @_catch_errors
     def get_my_profiles(self):
@@ -219,11 +243,11 @@ class GLPI:
               'name': 'Read-Only',
               'entities': [{'id': 0, 'name': 'Root entity', 'is_recursive': 1}]}]
         """
-        response = self.session.get(self._set_method('getMyProfiles'))
+        response = self.session.get(self._set_method("getMyProfiles"))
         return {
-            200: lambda r: r.json()['myprofiles'],
+            200: lambda r: r.json()["myprofiles"],
             400: _glpi_error,
-            401: _glpi_error
+            401: _glpi_error,
         }.get(response.status_code, _unknown_error)(response)
 
     @_catch_errors
@@ -242,11 +266,11 @@ class GLPI:
              'is_default': 0,
              ...
         """
-        response = self.session.get(self._set_method('getActiveProfile'))
+        response = self.session.get(self._set_method("getActiveProfile"))
         return {
-            200: lambda r: r.json()['active_profile'],
+            200: lambda r: r.json()["active_profile"],
             400: _glpi_error,
-            401: _glpi_error
+            401: _glpi_error,
         }.get(response.status_code, _unknown_error)(response)
 
     @_catch_errors
@@ -266,13 +290,14 @@ class GLPI:
             >>> glpi.set_active_profile(4) # Invalid profile for user
             GLPIError: (ERROR_ITEM_NOT_FOUND) Élément introuvable
         """
-        response = self.session.post(self._set_method('changeActiveProfile'),
-                                     json={'profiles_id': profile_id})
+        response = self.session.post(
+            self._set_method("changeActiveProfile"), json={"profiles_id": profile_id}
+        )
         {
             200: lambda r: bool(response.text),
             400: _glpi_error,
             401: _glpi_error,
-            404: _glpi_error
+            404: _glpi_error,
         }.get(response.status_code, _unknown_error)(response)
 
     @_catch_errors
@@ -288,11 +313,11 @@ class GLPI:
             >>> glpi.get_my_entities()
             [{'id': 0, 'name': 'Root entity'}]
         """
-        response = self.session.get(self._set_method('getMyEntities'))
+        response = self.session.get(self._set_method("getMyEntities"))
         return {
-            200: lambda r: r.json()['myentities'],
+            200: lambda r: r.json()["myentities"],
             400: _glpi_error,
-            401: _glpi_error
+            401: _glpi_error,
         }.get(response.status_code, _unknown_error)(response)
 
     @_catch_errors
@@ -309,11 +334,11 @@ class GLPI:
              'active_entity_recursive': False,
              'active_entities': [{'id': 0}, {'id': 3}, {'id': 2}, {'id': 1}]}
         """
-        response = self.session.get(self._set_method('getActiveEntities'))
+        response = self.session.get(self._set_method("getActiveEntities"))
         return {
-            200: lambda r: r.json()['active_entity'],
+            200: lambda r: r.json()["active_entity"],
             400: _glpi_error,
-            401: _glpi_error
+            401: _glpi_error,
         }.get(response.status_code, _unknown_error)(response)
 
     @_catch_errors
@@ -327,13 +352,14 @@ class GLPI:
 
             >>> glpi.set_active_entity(0, is_recursive=True)
         """
-        data = {'entities_id': entity_id, 'is_recursive': is_recursive}
-        response = self.session.post(self._set_method('changeActiveEntities'),
-                                     json=data)
+        data = {"entities_id": entity_id, "is_recursive": is_recursive}
+        response = self.session.post(
+            self._set_method("changeActiveEntities"), json=data
+        )
         return {
             200: lambda r: bool(response.text),
             400: _glpi_error,
-            401: _glpi_error
+            401: _glpi_error,
         }.get(response.status_code, _unknown_error)(response)
 
     @_catch_errors
@@ -351,11 +377,11 @@ class GLPI:
              'glpi_currenttime': '2018-09-06 14:52:31',
              ...
         """
-        response = self.session.get(self._set_method('getFullSession'))
+        response = self.session.get(self._set_method("getFullSession"))
         return {
-            200: lambda r: r.json()['session'],
+            200: lambda r: r.json()["session"],
             400: _glpi_error,
-            401: _glpi_error
+            401: _glpi_error,
         }.get(response.status_code, _unknown_error)(response)
 
     @_catch_errors
@@ -373,11 +399,10 @@ class GLPI:
                 'ar',
             ...
         """
-        response = self.session.get(self._set_method('getGlpiConfig'))
-        return {
-            200: lambda r: r.json(),
-            400: _glpi_error
-        }.get(response.status_code, _unknown_error)(response)
+        response = self.session.get(self._set_method("getGlpiConfig"))
+        return {200: lambda r: r.json(), 400: _glpi_error}.get(
+            response.status_code, _unknown_error
+        )(response)
 
     @_catch_errors
     def get_item(self, itemtype, item_id, **kwargs):
@@ -407,14 +432,15 @@ class GLPI:
                   'items_id': 1,
                   ...
         """
-        response = self.session.get(self._set_method(itemtype, item_id),
-                                    params=_convert_bools(kwargs))
+        response = self.session.get(
+            self._set_method(itemtype, item_id), params=_convert_bools(kwargs)
+        )
         return {
             200: lambda r: r.json(),
             400: _glpi_error,
             401: _glpi_error,
             # If object is not found, return None.
-            404: lambda r: None
+            404: lambda r: None,
         }.get(response.status_code, _unknown_error)(response)
 
     @_catch_errors
@@ -437,13 +463,14 @@ class GLPI:
             >>> glpi.get_all_items('Computer', is_deleted=True)
             []
         """
-        response = self.session.get(self._set_method(itemtype),
-                                    params=_convert_bools(kwargs))
+        response = self.session.get(
+            self._set_method(itemtype), params=_convert_bools(kwargs)
+        )
         return {
             200: lambda r: r.json(),
             206: lambda r: r.json(),
             400: _glpi_error,
-            401: _glpi_error
+            401: _glpi_error,
         }.get(response.status_code, _unknown_error)(response)
 
     @_catch_errors
@@ -465,13 +492,10 @@ class GLPI:
             ...
         """
         url = self._set_method(itemtype, item_id, sub_itemtype)
-        response = self.session.get(url,
-                                    params=_convert_bools(kwargs))
-        return {
-            200: lambda r: r.json(),
-            400: _glpi_error,
-            401: _glpi_error
-        }.get(response.status_code, _unknown_error)(response)
+        response = self.session.get(url, params=_convert_bools(kwargs))
+        return {200: lambda r: r.json(), 400: _glpi_error, 401: _glpi_error}.get(
+            response.status_code, _unknown_error
+        )(response)
 
     @_catch_errors
     def get_multiple_items(self, *items):
@@ -493,18 +517,20 @@ class GLPI:
               'name': 'test',
                ...}]
         """
-        def format_items(items):
-            return {'items[{:d}][{:s}]'.format(idx, key): value
-                    for idx, item in enumerate(items)
-                    for key, value in item.items()}
 
-        response = self.session.get(self._set_method('getMultipleItems'),
-                                    params=format_items(items))
-        return {
-            200: lambda r: r.json(),
-            400: _glpi_error,
-            401: _glpi_error
-        }.get(response.status_code, _unknown_error)(response)
+        def format_items(items):
+            return {
+                "items[{:d}][{:s}]".format(idx, key): value
+                for idx, item in enumerate(items)
+                for key, value in item.items()
+            }
+
+        response = self.session.get(
+            self._set_method("getMultipleItems"), params=format_items(items)
+        )
+        return {200: lambda r: r.json(), 400: _glpi_error, 401: _glpi_error}.get(
+            response.status_code, _unknown_error
+        )(response)
 
     @_catch_errors
     def list_search_options(self, itemtype, raw=False):
@@ -525,20 +551,22 @@ class GLPI:
               'datatype': 'itemlink',
               ...
         """
-        response = self.session.get(self._set_method('listSearchOptions', itemtype),
-                                    params='raw' if raw else None)
-        return {
-            200: lambda r: r.json(),
-            400: _glpi_error,
-            401: _glpi_error
-        }.get(response.status_code, _unknown_error)(response)
+        response = self.session.get(
+            self._set_method("listSearchOptions", itemtype),
+            params="raw" if raw else None,
+        )
+        return {200: lambda r: r.json(), 400: _glpi_error, 401: _glpi_error}.get(
+            response.status_code, _unknown_error
+        )(response)
 
     def _map_fields(self, itemtype):
         """Private method that returns a mapping between fields uid and fields
         id."""
-        return {field['uid'].replace('{:s}.'.format(itemtype), ''): field_id
-                for field_id, field in self.list_search_options(itemtype).items()
-                if 'uid' in field}
+        return {
+            field["uid"].replace("{:s}.".format(itemtype), ""): field_id
+            for field_id, field in self.list_search_options(itemtype).items()
+            if "uid" in field
+        }
 
     def field_id(self, itemtype, field_uid, refresh=False):
         """Return ``itemtype`` field id from ``field_uid``. Each ``itemtype``
@@ -569,9 +597,9 @@ class GLPI:
         if itemtype not in self._fields or refresh:
             self._fields[itemtype] = self._map_fields(itemtype)
         # Reverse mapping and return field uid.
-        return {value: key
-                for key, value in self._fields[itemtype].items()
-               }[str(field_id)]
+        return {value: key for key, value in self._fields[itemtype].items()}[
+            str(field_id)
+        ]
 
     @_catch_errors
     def search(self, itemtype, **kwargs):
@@ -603,29 +631,39 @@ class GLPI:
         """
         # Function for mapping field id from field uid if field_id is not a number.
         def field_id(itemtype, field):
-            return (int(field)
-                    if re.match(r'^\d+$', str(field))
-                    else self.field_id(itemtype, field))
+            return (
+                int(field)
+                if re.match(r"^\d+$", str(field))
+                else self.field_id(itemtype, field)
+            )
 
         # Format 'criteria' and 'metacriteria' parameters.
-        kwargs.update({'{:s}[{:d}][{:s}]'.format(param, idx, filter_param): (
-                            field_id(itemtype, value)
-                            if filter_param == 'field'
-                            else value.replace("'", "''"))
-                       for param in ('criteria', 'metacriteria')
-                       for idx, c in enumerate(kwargs.pop(param, []) or [])
-                       for filter_param, value in c.items()})
+        kwargs.update(
+            {
+                "{:s}[{:d}][{:s}]".format(param, idx, filter_param): (
+                    field_id(itemtype, value)
+                    if filter_param == "field"
+                    else value.replace("'", "''")
+                )
+                for param in ("criteria", "metacriteria")
+                for idx, c in enumerate(kwargs.pop(param, []) or [])
+                for filter_param, value in c.items()
+            }
+        )
         # Format 'forcedisplay' parameters.
-        kwargs.update({'forcedisplay[{:d}]'.format(idx): field_id(itemtype, field)
-                       for idx, field in enumerate(kwargs.pop('forcedisplay', []) or [])})
+        kwargs.update(
+            {
+                "forcedisplay[{:d}]".format(idx): field_id(itemtype, field)
+                for idx, field in enumerate(kwargs.pop("forcedisplay", []) or [])
+            }
+        )
 
-        response = self.session.get(self._set_method('search', itemtype),
-                                    params=kwargs)
+        response = self.session.get(self._set_method("search", itemtype), params=kwargs)
         return {
-            200: lambda r: r.json().get('data', []),
-            206: lambda r: r.json().get('data', []),
+            200: lambda r: r.json().get("data", []),
+            206: lambda r: r.json().get("data", []),
             400: _glpi_error,
-            401: _glpi_error
+            401: _glpi_error,
         }.get(response.status_code, _unknown_error)(response)
 
     @_catch_errors
@@ -642,13 +680,12 @@ class GLPI:
                          {'name': 'computer2', 'serial': '234567', 'entities_id': 1})
             [{'id': 5, 'message': ''}, {'id': 6, 'message': ''}]
         """
-        response = self.session.post(self._set_method(itemtype),
-                                     json={'input': items})
+        response = self.session.post(self._set_method(itemtype), json={"input": items})
         return {
             201: lambda r: r.json(),
             207: lambda r: r.json()[1],
             400: _glpi_error,
-            401: _glpi_error
+            401: _glpi_error,
         }.get(response.status_code, _unknown_error)(response)
 
     @_catch_errors
@@ -667,13 +704,12 @@ class GLPI:
                             {'id': 6, 'otherserial': 'bcdefg'})
             [{'5': True, 'message': ''}, {'6': True, 'message': ''}]
         """
-        response = self.session.put(self._set_method(itemtype),
-                                    json={'input': items})
+        response = self.session.put(self._set_method(itemtype), json={"input": items})
         return {
             200: lambda r: r.json(),
             207: lambda r: r.json()[1],
             400: _glpi_error,
-            401: _glpi_error
+            401: _glpi_error,
         }.get(response.status_code, _unknown_error)(response)
 
     @_catch_errors
@@ -695,15 +731,19 @@ class GLPI:
             >>> glpi.delete('Computer', {'id': 2}, {'id': 101}, force_purge=True)
             [{'2': True, 'message': ''}, {'101': False, 'message': 'Item not found'}]
         """
-        response = self.session.delete(self._set_method(itemtype),
-                                       params=_convert_bools(kwargs),
-                                       json={'input': items})
+        response = self.session.delete(
+            self._set_method(itemtype),
+            params=_convert_bools(kwargs),
+            json={"input": items},
+        )
         return {
             200: lambda r: r.json(),
             204: lambda r: r.json(),
             207: lambda r: r.json()[1],
-            400: lambda r: _glpi_error(r) if r.json()[0] != 'ERROR_GLPI_DELETE' else r.json()[1],
-            401: _glpi_error
+            400: lambda r: _glpi_error(r)
+            if r.json()[0] != "ERROR_GLPI_DELETE"
+            else r.json()[1],
+            401: _glpi_error,
         }.get(response.status_code, _unknown_error)(response)
 
     @_catch_errors
@@ -725,35 +765,37 @@ class GLPI:
         This method raise a warning (and another warning if the document could not
         be deleted for some reasons) and purge the created but incomplete document.
         """
-        with open(filepath, 'rb') as fhandler:
+        with open(filepath, "rb") as fhandler:
             response = requests.post(
-                url=self._set_method('Document'),
+                url=self._set_method("Document"),
                 headers={
-                    'Session-Token': self.session.headers['Session-Token'],
-                    'App-Token': self.session.headers['App-Token']
+                    "Session-Token": self.session.headers["Session-Token"],
+                    "App-Token": self.session.headers["App-Token"],
                 },
                 files={
-                    'uploadManifest': (
+                    "uploadManifest": (
                         None,
-                        _UPLOAD_MANIFEST.format(name=name, filename=os.path.basename(filepath)),
-                        'application/json'
+                        _UPLOAD_MANIFEST.format(
+                            name=name, filename=os.path.basename(filepath)
+                        ),
+                        "application/json",
                     ),
-                    'filename[0]': (filepath, fhandler)
-                }
+                    "filename[0]": (filepath, fhandler),
+                },
             )
 
         if response.status_code != 201:
             _glpi_error(response)
 
-        doc_id = response.json()['id']
-        error = response.json()['upload_result']['filename'][0].get('error', None)
+        doc_id = response.json()["id"]
+        error = response.json()["upload_result"]["filename"][0].get("error", None)
         if error is not None:
             warnings.warn(_WARN_DEL_DOC.format(doc_id), UserWarning)
             try:
-                self.delete('Document', {'id': doc_id}, force_purge=True)
+                self.delete("Document", {"id": doc_id}, force_purge=True)
             except GLPIError as err:
                 warnings.warn(_WARN_DEL_ERR.format(doc_id, str(err)), UserWarning)
-            raise GLPIError('(ERROR_GLPI_INVALID_DOCUMENT) {:s}'.format(error))
+            raise GLPIError("(ERROR_GLPI_INVALID_DOCUMENT) {:s}".format(error))
 
         return response.json()
 
@@ -775,22 +817,26 @@ class GLPI:
             /tmp/thenameiwant.txt
         """
         if not os.path.exists(dirpath):
-            raise GLPIError("unable to download file of document '{:d}': directory "
-                            "'{:s}' does not exists".format(doc_id, dirpath))
+            raise GLPIError(
+                "unable to download file of document '{:d}': directory "
+                "'{:s}' does not exists".format(doc_id, dirpath)
+            )
 
         response = self.session.get(
-            url=self._set_method('Document', doc_id),
+            url=self._set_method("Document", doc_id),
             headers={
-                'Session-Token': self.session.headers['Session-Token'],
-                'App-Token': self.session.headers['App-Token'],
-                'Accept': 'application/octet-stream'
-            }
+                "Session-Token": self.session.headers["Session-Token"],
+                "App-Token": self.session.headers["App-Token"],
+                "Accept": "application/octet-stream",
+            },
         )
         if response.status_code != 200:
             _glpi_error(response)
 
-        filename = filename or _FILENAME_RE.findall(response.headers['Content-disposition'])[0]
+        filename = (
+            filename or _FILENAME_RE.findall(response.headers["Content-disposition"])[0]
+        )
         filepath = os.path.join(dirpath, filename)
-        with open(filepath, 'wb') as fhandler:
+        with open(filepath, "wb") as fhandler:
             fhandler.write(response.content)
         return filepath

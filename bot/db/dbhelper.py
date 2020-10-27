@@ -1,9 +1,10 @@
 import json
 import vedis
 
+
 class DBHelper:
-    def __init__(self, filename: str=':mem:'):
-        self.filename: str= filename
+    def __init__(self, filename: str = ":mem:"):
+        self.filename: str = filename
         self.db: vedis = vedis.Vedis(self.filename)
 
     def add_data(self, key, value):
@@ -20,6 +21,6 @@ class DBHelper:
 
     def get_data(self, key):
         try:
-            return json.loads(self.db.get(key).decode('utf8'))
+            return json.loads(self.db.get(key).decode("utf8"))
         except KeyError:
             return None
