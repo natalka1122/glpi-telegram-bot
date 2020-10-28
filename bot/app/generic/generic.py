@@ -14,8 +14,8 @@ async def start_message(user_id: int):
 
     Args:
         user_id (int): telegram user id that issued /start command
-    TODO: Ask logged user if he wants to logout
     """
+    # TODO: Ask logged user if he wants to logout
     logging.debug("%d /start command", user_id)
     await create_user_session(user_id)
 
@@ -156,12 +156,10 @@ async def text_message(message: types.Message):
 
     Args:
         message (types.Message): Message user sent
-    TODO: Make something great here
     """
+    # TODO: Make something great here
     user_id = message.from_user.id
     text = message.text
     logging.debug("%d Received message unknown message", user_id)
     logging.debug("%d %s", user_id, text)
-    await bot.send_message(
-        user_id, "Ничего не понял. user_id: %d message: %s", user_id, text
-    )
+    await bot.send_message(user_id, "Ничего не понял")

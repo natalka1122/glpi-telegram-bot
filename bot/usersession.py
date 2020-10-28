@@ -10,7 +10,6 @@ class StupidError(Exception):
 
 class UserSession:
     """General class for user
-    TODO: Change login scenario
     There are two scenarios:
     1) UserSession(user_id, login, password)
         try to login, and if successful, then write data in database
@@ -18,7 +17,9 @@ class UserSession:
         read data from database.
     """
 
-    URL = config.SKIT_BASE_URL
+    # TODO Add support for password change of password
+
+    URL = config.GLPI_BASE_URL
 
     def __init__(self, user_id, login=None, password=None):
         data = core.db_connect.get_data(user_id)

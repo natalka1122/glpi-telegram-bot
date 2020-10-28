@@ -1,23 +1,36 @@
-# coding: utf-8
-
 """Import the environmental values.
 """
 
 import logging
 import os
+import sys
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-LOG_FILENAME = os.getenv("LOG_FILENAME")
-SKIT_BASE_URL = os.getenv("SKIT_BASE_URL")
+if TELEGRAM_TOKEN is None:
+    print(
+        "There is no telegram token. Please provide TELEGRAM_TOKEN in .env file or as environment variable",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 
-db_dir = os.getenv("DATABASE")
-os.makedirs(db_dir, exist_ok=True)
-DB_FILE = db_dir + "db.db"
-STATE_FILE = db_dir + "state.json"
+GLPI_BASE_URL = os.getenv("GLPI_BASE_URL")
+if GLPI_BASE_URL is None:
+    print(
+        "There is no GPLI API url. Please provide GLPI_BASE_URL in .env file or as environment variable",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+
+data_dir = os.getenv("DATA_DIR")
+os.makedirs(data_dir, exist_ok=True)
+DB_FILE = data_dir + "db.db"
+STATE_FILE = data_dir + "state.json"
+LOG_FILENAME = data_dir + "log.txt"
 
 log_level = os.getenv("LOG_LEVEL").upper()
 if log_level == "CRITICAL":
@@ -33,5 +46,4 @@ elif log_level == "DEBUG":
 elif log_level == "NOTSET":
     LOG_LEVEL = logging.NOTSET
 else:
-    print("Wrong log_level: {}".format(log_level))
-    LOG_LEVEL = logging.NOTSET
+    LOG_LEVEL = logging.INFO

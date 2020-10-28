@@ -1,9 +1,9 @@
-# coding: utf-8
-
-"""Main exec file for telegram bot.
+"""
+Main exec file for telegram bot.
 """
 
 import logging
+from typing import Union
 
 from aiogram import types
 from aiogram.dispatcher import FSMContext
@@ -16,30 +16,64 @@ from bot.app.state import Form
 
 # TODO add /help
 # TODO add /cancel
+# TODO add logout process
+
 
 @dp.message_handler(commands=["start"], state="*")
-async def start_message(message: types.Message):
+async def start_message(message: types.Message, state: FSMContext) -> None:
     """Reacts on /start command in every state"""
-    logging.info("%d", message.from_user.id)
-    await generic.start_message(message.from_user.id)
+    user_id: int = message.from_user.id
+    current_state: Union[str, None] = await state.get_state()
+    logging.info("User ID %d issued /start command. State: %s", user_id, current_state)
+
+    await generic.start_message(user_id)
 
 
 # ONBOARDING
 # =======================================================
-# TODO add logout process
 
-@dp.message_handler(state=Form.to_enter_login)
-async def process_to_enter_login(message: types.Message, state: FSMContext):
+
+@dp.message_handler(content_types=types.ContentTypes.TEXT, state=Form.to_enter_login)
+async def process_to_enter_login(message: types.Message, state: FSMContext) -> None:
     """Reacts on every text entered with the state Form.to_enter_login"""
-    logging.info("%d", message.from_user.id)
-    await onboarding.process_to_enter_login(message, state)
+    user_id: int = message.from_user.id
+    text: str = message.text
+    current_state: Union[str, None] = await state.get_state()
+    logging.info(
+        "User ID %d provided login: '%s'. State: %s", user_id, text, current_state
+    )
+
+    if message.is_command():
+        await onboarding.process_cancel(
+            user_id,
+            state,
+            "Что-то пошло не так? Давайте попробуем начать сначала. Введите /start",
+        )
+        return
+
+    await onboarding.process_to_enter_login(user_id, text, state)
 
 
-@dp.message_handler(state=Form.to_enter_password)
-async def to_enter_password(message: types.Message, state: FSMContext):
+@dp.message_handler(content_types=types.ContentTypes.TEXT, state=Form.to_enter_password)
+async def to_enter_password(message: types.Message, state: FSMContext) -> None:
     """Reacts on every text entered with the state Form.to_enter_password"""
-    logging.info("%d", message.from_user.id)
-    await onboarding.process_to_enter_password(message, state)
+    user_id: int = message.from_user.id
+    text: str = message.text
+
+    current_state: Union[str, None] = await state.get_state()
+    logging.info(
+        "User ID %d provided password: ***. Status: %s", user_id, current_state
+    )
+
+    if message.is_command():
+        await onboarding.process_cancel(
+            user_id,
+            state,
+            "Что-то пошло не так? Давайте попробуем начать сначала. Введите /start",
+        )
+        return
+
+    await onboarding.process_to_enter_password(user_id, text, state)
 
 
 # TICKETS
@@ -47,10 +81,13 @@ async def to_enter_password(message: types.Message, state: FSMContext):
 
 
 @dp.message_handler(commands=["list"], state=Form.logged_in)
-async def list_all_tickets(message: types.Message):
-    """Reacts on /list command for logged user"""
-    logging.info("%d", message.from_user.id)
-    await generic.list_all_tickets(message.from_user.id)
+async def list_all_tickets(message: types.Message, state: FSMContext) -> None:
+    """Reacts on /list command in every state"""
+    user_id: int = message.from_user.id
+    current_state: Union[str, None] = await state.get_state()
+    logging.info("User ID %d issued /list command. State: %s", user_id, current_state)
+
+    await generic.list_all_tickets(user_id)
 
 
 @dp.message_handler(commands=["add"], state=Form.logged_in)
@@ -94,3 +131,4 @@ async def text_message(message):
 
 if __name__ == "__main__":
     executor.start_polling(dp, skip_updates=True)
+    logging.info("GLPI Telegram bot has started")

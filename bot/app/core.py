@@ -1,8 +1,8 @@
 """Some core variable initiations
 """
 import logging
+import sys
 
-import expiringdict
 from aiogram import Bot, Dispatcher
 from aiogram.contrib.fsm_storage.files import JSONStorage
 
@@ -15,10 +15,11 @@ logging.basicConfig(
     filename=config.LOG_FILENAME,
     format="%(asctime)s - %(message)s",
     datefmt="%d-%b-%y %H:%M:%S",
-    filemode="w",
+    filemode="a",
 )
+logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 
-sessions = expiringdict.ExpiringDict(max_len=2000, max_age_seconds=60 * 60 * 24)
+# sessions = expiringdict.ExpiringDict(max_len=2000, max_age_seconds=60 * 60 * 24)
 
 db_connect = DBHelper(config.DB_FILE)
 
@@ -26,13 +27,13 @@ bot = Bot(token=config.TELEGRAM_TOKEN)
 dp = Dispatcher(bot, storage=JSONStorage(config.STATE_FILE))
 
 
-async def create_user_session(user_id: int):
+async def create_user_session(user_id: int) -> None:
     """Initiate user session
 
     Args:
         user_id (int): telegram user id
-    TODO: handle logged in users who wants to logout
     """
+    # TODO: handle logged in users who wants to logout
     user_data = db_connect.get_data(user_id)
     logging.debug("create_user_session: user_data = %s", user_data)
 

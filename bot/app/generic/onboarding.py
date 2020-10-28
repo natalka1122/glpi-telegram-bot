@@ -1,5 +1,6 @@
+"""Login proccess
+"""
 import logging
-from aiogram import types
 from aiogram.dispatcher import FSMContext
 import bot.app.core as core
 from bot.usersession import UserSession
@@ -11,7 +12,7 @@ async def onboarding_start(user_id):
     """
     Conversation's entry point
     """
-    logging.info("{} started onboarding".format(user_id))
+    logging.info("%d started onboarding", user_id)
     # Set state
     await Form.to_enter_login.set()
     await core.bot.send_message(
@@ -20,26 +21,36 @@ async def onboarding_start(user_id):
     )
 
 
-async def process_to_enter_login(message: types.Message, state: FSMContext):
+async def process_cancel(user_id: int, state: FSMContext, info_text: str = "") -> None:
+    """Reset state
+
+    Args:
+        user_id (int): telegram user id that issued command
+    """
+    logging.info("User ID %d reset state", user_id)
+    await state.finish()
+    if len(info_text) > 0:
+        await core.bot.send_message(user_id, info_text)
+
+
+async def process_to_enter_login(user_id: int, login: str, state: FSMContext):
     """
     Process user login
     """
-    user_id = message.from_user.id
-    logging.info("{} in to_enter_login".format(user_id))
+    logging.info("%d in to_enter_login", user_id)
+
     async with state.proxy() as data:
-        data["login"] = message.text
+        data["login"] = login
 
     await Form.to_enter_password.set()
     await core.bot.send_message(user_id, "Введите Ваш пароль")
 
 
-async def process_to_enter_password(message: types.Message, state: FSMContext):
+async def process_to_enter_password(user_id: int, password: str, state: FSMContext):
     """
     Process user password
     """
-    user_id = message.from_user.id
-    password = message.text
-    logging.info("{} in to_enter_password".format(user_id))
+    logging.info("%d in to_enter_password", user_id)
     async with state.proxy() as data:
         if (
             "login" not in data
@@ -48,15 +59,12 @@ async def process_to_enter_password(message: types.Message, state: FSMContext):
             or len(password) == 0
         ):
             logging.warning(
-                "Something is terribly wrong during authorisation: user_id = {} first_name = {} last_name = {} data = {} ".format(
-                    user_id,
-                    message.from_user.first_name,
-                    message.from_user.last_name,
-                    data,
-                )
+                "Something is terribly wrong during authorisation: user_id = %d data = %s",
+                user_id,
+                data,
             )
             await core.bot.send_message(
-                message.from_user.id,
+                user_id,
                 "Всё сломалось. Надо начинать заново. Введите /start",
             )
             # Finish conversation
@@ -64,21 +72,19 @@ async def process_to_enter_password(message: types.Message, state: FSMContext):
             return
         login = data["login"]
         logging.debug(
-            "Try to login userid {} with login {} password {}".format(
-                user_id, login, password
-            )
+            "Try to login userid %d with login %s password %s", user_id, login, password
         )
         try:
-            user_session = UserSession(user_id, login, password)
+            UserSession(user_id, login, password)
         except GLPIError:
-            logging.debug("{} wrong  login/password".format(user_id))
+            logging.debug("%d wrong  login/password", user_id)
             await core.bot.send_message(
                 user_id, "Неправильная пара логин/пароль. Давайте попробуем еще раз"
             )
             await onboarding_start(user_id)
             return
 
-        logging.debug("user {} logged in".format(user_id))
+        logging.debug("user %d logged in", user_id)
         await Form.logged_in.set()
         await core.bot.send_message(
             user_id, "Отлично, теперь нас есть о чём поговорить!"
