@@ -1,0 +1,4 @@
+[MASTER]
+extension-pkg-whitelist=vedis
+[MESSAGES CONTROL]
+disable=R0904,locally-disables,c-extension-no-member,too-many-public-methods
