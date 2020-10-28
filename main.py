@@ -14,6 +14,9 @@ from bot.app.generic import generic, onboarding
 from bot.app.state import Form
 
 
+# TODO add /help
+# TODO add /cancel
+
 @dp.message_handler(commands=["start"], state="*")
 async def start_message(message: types.Message):
     """Reacts on /start command in every state"""
@@ -23,7 +26,7 @@ async def start_message(message: types.Message):
 
 # ONBOARDING
 # =======================================================
-
+# TODO add logout process
 
 @dp.message_handler(state=Form.to_enter_login)
 async def process_to_enter_login(message: types.Message, state: FSMContext):
