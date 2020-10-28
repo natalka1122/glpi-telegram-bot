@@ -4,11 +4,8 @@ services:
   rtkskit:
     build: .
     restart: unless-stopped
-    networks:
-      - default
     environment:
       TELEGRAM_TOKEN: "TO_REPLACE"
       GLPI_BASE_URL: "http://glpi.TO_REPLACE.example.com/apirest.php/"
-      LOG_FILENAME: "data/log.txt"
-      DATABASE: "data/"
-      LOG_LEVEL: "DEBUG"
+    volumes:
+      - /TO_REPLACE:/app/data

@@ -25,12 +25,13 @@ if GLPI_BASE_URL is None:
     )
     sys.exit(1)
 
-
-data_dir = os.getenv("DATA_DIR")
-os.makedirs(data_dir, exist_ok=True)
-DB_FILE = data_dir + "db.db"
-STATE_FILE = data_dir + "state.json"
-LOG_FILENAME = data_dir + "log.txt"
+DATA_DIR = os.getenv("DATA_DIR")
+if DATA_DIR is None:
+    DATA_DIR = "data/"
+os.makedirs(DATA_DIR, exist_ok=True)
+DB_FILE = DATA_DIR + "db.db"
+STATE_FILE = DATA_DIR + "state.json"
+LOG_FILENAME = DATA_DIR + "log.txt"
 
 log_level = os.getenv("LOG_LEVEL").upper()
 if log_level == "CRITICAL":

@@ -8,7 +8,7 @@ from bot.glpi_api import GLPIError
 from bot.app.state import Form
 
 
-async def onboarding_start(user_id):
+async def onboarding_start(user_id: int) -> None:
     """
     Conversation's entry point
     """
@@ -33,7 +33,7 @@ async def process_cancel(user_id: int, state: FSMContext, info_text: str = "") -
         await core.bot.send_message(user_id, info_text)
 
 
-async def process_to_enter_login(user_id: int, login: str, state: FSMContext):
+async def process_to_enter_login(user_id: int, login: str, state: FSMContext) -> None:
     """
     Process user login
     """
@@ -46,7 +46,9 @@ async def process_to_enter_login(user_id: int, login: str, state: FSMContext):
     await core.bot.send_message(user_id, "Введите Ваш пароль")
 
 
-async def process_to_enter_password(user_id: int, password: str, state: FSMContext):
+async def process_to_enter_password(
+    user_id: int, password: str, state: FSMContext
+) -> None:
     """
     Process user password
     """

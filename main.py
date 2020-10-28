@@ -80,21 +80,24 @@ async def to_enter_password(message: types.Message, state: FSMContext) -> None:
 # =======================================================
 
 
-@dp.message_handler(commands=["list"], state=Form.logged_in)
+@dp.message_handler(commands=["tickets"], state=Form.logged_in)
 async def list_all_tickets(message: types.Message, state: FSMContext) -> None:
-    """Reacts on /list command in every state"""
+    """Reacts on /tickets command in every state"""
     user_id: int = message.from_user.id
     current_state: Union[str, None] = await state.get_state()
-    logging.info("User ID %d issued /list command. State: %s", user_id, current_state)
+    logging.info("User ID %d issued /tickets command. State: %s", user_id, current_state)
 
     await generic.list_all_tickets(user_id)
 
 
 @dp.message_handler(commands=["add"], state=Form.logged_in)
-async def add_ticket(message: types.Message):
+async def add_ticket(message: types.Message, state: FSMContext) -> None:
     """Reacts on /add command for logged user"""
-    logging.info("%d", message.from_user.id)
-    await generic.add_new_ticket(message.from_user.id)
+    user_id: int = message.from_user.id
+    current_state: Union[str, None] = await state.get_state()
+    logging.info("User ID %d issued /add command. State: %s", user_id, current_state)
+
+    await generic.add_new_ticket(user_id)
 
 
 @dp.message_handler(commands=["edit"], state=Form.logged_in)
