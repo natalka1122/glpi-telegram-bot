@@ -1,14 +1,24 @@
+"""Module for UserSession class"""
+import config
 import bot.glpi_api as glpi_api
 from bot.app import core
 
 
 class StupidError(Exception):
-    pass
+    """Exception raised by this module."""
 
 
 class UserSession:
+    """General class for user
+    TODO: Change login scenario
+    There are two scenarios:
+    1) UserSession(user_id, login, password)
+        try to login, and if successful, then write data in database
+    2) UserSession(user_id)
+        read data from database.
+    """
 
-    URL = core.SKIT_BASE_URL
+    URL = config.SKIT_BASE_URL
 
     def __init__(self, user_id, login=None, password=None):
         data = core.db_connect.get_data(user_id)
@@ -29,23 +39,28 @@ class UserSession:
         self.login = data["login"]
         self.password = data["password"]
 
-    """
-    Raise error if no login with provided credentials
-    """
-
     def check_cred(self):
+        """
+        Raise error if no login with provided credentials
+        """
         with glpi_api.connect(
             url=self.URL, auth=(self.login, self.password), apptoken=""
         ):
             pass
 
     def get_all_tickets(self):
+        """
+        Return all tickets
+        """
         with glpi_api.connect(
             url=self.URL, auth=(self.login, self.password), apptoken=""
         ) as glpi:
             return glpi.get_all_items("ticket")
 
     def create_ticket(self, title):
+        """
+        Create one ticket with specified title
+        """
         with glpi_api.connect(
             url=self.URL, auth=(self.login, self.password), apptoken=""
         ) as glpi:
@@ -53,10 +68,13 @@ class UserSession:
         # [{'id': 1309, 'message': 'Объект успешно добавлен: dds'}]
         if isinstance(result, list) and len(result) == 1 and "id" in result[0]:
             return result[0]["id"]
-        else:
-            raise StupidError("Failed to add ticket: {}".format(result))
+
+        raise StupidError("Failed to add ticket: {}".format(result))
 
     def get_one_ticket(self, ticket_id):
+        """
+        Return one ticket with ticket_id
+        """
         with glpi_api.connect(
             url=self.URL, auth=(self.login, self.password), apptoken=""
         ) as glpi:

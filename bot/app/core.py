@@ -1,24 +1,18 @@
-from config import (
-    TELEGRAM_TOKEN,
-    LOG_FILENAME,
-    LOG_LEVEL,
-    DB_FILE,
-    SKIT_BASE_URL,
-    STATE_FILE,
-)
-
-import sys
+"""Some core variable initiations
+"""
 import logging
+
 import expiringdict
 from aiogram import Bot, Dispatcher
 from aiogram.contrib.fsm_storage.files import JSONStorage
-from bot.db.dbhelper import DBHelper
-from bot.app.generic import onboarding
 
+import config
+from bot.app.generic import onboarding
+from bot.db.dbhelper import DBHelper
 
 logging.basicConfig(
-    level=LOG_LEVEL,
-    filename=LOG_FILENAME,
+    level=config.LOG_LEVEL,
+    filename=config.LOG_FILENAME,
     format="%(asctime)s - %(message)s",
     datefmt="%d-%b-%y %H:%M:%S",
     filemode="w",
@@ -26,22 +20,31 @@ logging.basicConfig(
 
 sessions = expiringdict.ExpiringDict(max_len=2000, max_age_seconds=60 * 60 * 24)
 
-db_connect = DBHelper(DB_FILE)
+db_connect = DBHelper(config.DB_FILE)
 
-bot = Bot(token=TELEGRAM_TOKEN)
-dp = Dispatcher(bot, storage=JSONStorage(STATE_FILE))
+bot = Bot(token=config.TELEGRAM_TOKEN)
+dp = Dispatcher(bot, storage=JSONStorage(config.STATE_FILE))
 
 
-async def create_user_session(user_id):
+async def create_user_session(user_id: int):
+    """Initiate user session
+
+    Args:
+        user_id (int): telegram user id
+    TODO: handle logged in users who wants to logout
+    """
     user_data = db_connect.get_data(user_id)
-    logging.debug("create_user_session: user_data = {}".format(user_data))
+    logging.debug("create_user_session: user_data = %s", user_data)
 
     if user_data is None:
-        logging.info("{} has no session in db".format(user_id))
+        logging.info("%s has no session in db", user_id)
         await onboarding.onboarding_start(user_id)
         return
+
     logging.info("found user_session. NOT IMPLEMENTED")
     await bot.send_message(
         user_id,
-        "Вас приветсвует супер-бот СКИТ. Введите /list, что бы получить список тикетов. Введите /add, что бы создать тикет. Введите /edit, что бы отредактировать тикет",
+        "Вас приветсвует супер-бот СКИТ.\n"
+        "Введите /list, что бы получить список тикетов.\n"
+        "Введите /add, что бы создать тикет. Введите /edit, что бы отредактировать тикет",
     )

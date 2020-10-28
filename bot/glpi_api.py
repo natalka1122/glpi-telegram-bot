@@ -1,18 +1,20 @@
-# coding: utf-8
-
 """Module for interacting with GLPI using the REST API. It just wraps endpoints
 provided by the API and manage HTTP return codes.
 """
 
 from __future__ import unicode_literals
-import re
+
 import os
+import re
 import sys
 import warnings
-from functools import wraps
 from base64 import b64encode
 from contextlib import contextmanager
+from functools import wraps
+
 import requests
+import urllib3
+from urllib3.exceptions import InsecureRequestWarning
 
 _UPLOAD_MANIFEST = (
     '{{ "input": {{ "name": "{name:s}", "_filename" : ["{filename:s}"] }} }}'
@@ -112,7 +114,7 @@ def _catch_errors(func):
         try:
             return func(self, *args, **kwargs)
         except requests.exceptions.RequestException as err:
-            raise GLPIError("communication error: {:s}".format(str(err)))
+            raise GLPIError("communication error: {:s}".format(str(err))) from err
 
     return wrapper
 
@@ -146,9 +148,7 @@ class GLPI:
         # Initialize session.
         self.session = requests.Session()
         if not verify_certs:
-            from requests.packages.urllib3.exceptions import InsecureRequestWarning
-
-            requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+            urllib3.disable_warnings(InsecureRequestWarning)
             self.session.verify = False
 
         # Connect and retrieve token.

@@ -1,5 +1,11 @@
-import os
+# coding: utf-8
+
+"""Import the environmental values.
+"""
+
 import logging
+import os
+
 from dotenv import load_dotenv
 
 load_dotenv()

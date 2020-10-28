@@ -1,7 +1,11 @@
+"""Module for every possible state in aiogram
+"""
 from aiogram.dispatcher.filters.state import State, StatesGroup
 
 
 class Form(StatesGroup):
+    """Class for every possible state in aiogram"""
+
     to_enter_login = State()  # Will be represented in storage as 'Form:to_enter_login'
     to_enter_password = (
         State()
