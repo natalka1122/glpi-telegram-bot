@@ -1,8 +1,8 @@
 """Main function used are declared here
 """
 import logging
+from typing import List, Dict
 
-from aiogram import types
 from bot.app.core import bot, create_user_session
 from bot.app.state import Form
 from bot.app.ticket import show_ticket
@@ -26,16 +26,16 @@ async def list_all_tickets(user_id: int):
     Args:
         user_id (int): telegram user id that issued command
     """
-    logging.debug("%d /list command", user_id)
-    list_tickets = UserSession(user_id).get_all_tickets()
+    list_tickets: List[Dict] = UserSession(user_id).get_all_tickets()
     if len(list_tickets) == 0:
-        await bot.send_message(user_id, "Нет никаких тикетов")
+        logging.info(
+            "User ID %d issued /tickets command and there are no tickets", user_id
+        )
+        await bot.send_message(user_id, "Список тикетов пуст")
         return
 
     for current_ticket in list_tickets:
-        ticket_to_print = show_ticket(current_ticket)
-        for chunk in ticket_to_print:
-            await bot.send_message(user_id, "{}".format(chunk))
+        await show_ticket(current_ticket, bot.send_message, user_id)
 
 
 async def add_new_ticket(user_id: int) -> None:
@@ -44,10 +44,8 @@ async def add_new_ticket(user_id: int) -> None:
     Args:
         user_id (int): telegram user id that issued command
     """
-    logging.debug("%d /add command", user_id)
-
     await Form.to_enter_title.set()
-    await bot.send_message(user_id, "Введите, пожалуйста, тему обращения")
+    await bot.send_message(user_id, "Введите заголовок заявки")
 
 
 async def process_to_enter_title(user_id: int, title: str) -> None:
@@ -57,8 +55,6 @@ async def process_to_enter_title(user_id: int, title: str) -> None:
         user_id (int): telegram user id that issued command
         title (str): title for new ticket
     """
-    logging.debug("%d process_to_enter_title", user_id)
-
     try:
         ticket_id = UserSession(user_id).create_ticket(title)
     except StupidError as err:
@@ -151,15 +147,14 @@ async def not_implemented(user_id: int) -> None:
 
 
 # UNKNOWN ==================================================================
-async def text_message(message: types.Message):
+async def text_message(user_id):
     """React on something it cannot understand
 
     Args:
-        message (types.Message): Message user sent
+        user_id (int): telegram user id that issued command
     """
-    # TODO: Make something great here
-    user_id = message.from_user.id
-    text = message.text
-    logging.debug("%d Received message unknown message", user_id)
-    logging.debug("%d %s", user_id, text)
-    await bot.send_message(user_id, "Ничего не понял")
+    # TODO: Make something great when user input was not understood
+    await bot.send_message(
+        user_id,
+        "К сожалению, наш робот Вас не понял. Попробуйте ещё раз или введите /help",
+    )

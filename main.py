@@ -85,7 +85,9 @@ async def list_all_tickets(message: types.Message, state: FSMContext) -> None:
     """Reacts on /tickets command in every state"""
     user_id: int = message.from_user.id
     current_state: Union[str, None] = await state.get_state()
-    logging.info("User ID %d issued /tickets command. State: %s", user_id, current_state)
+    logging.info(
+        "User ID %d issued /tickets command. State: %s", user_id, current_state
+    )
 
     await generic.list_all_tickets(user_id)
 
@@ -100,6 +102,7 @@ async def add_ticket(message: types.Message, state: FSMContext) -> None:
     await generic.add_new_ticket(user_id)
 
 
+# TODO Elimitate /edit command
 @dp.message_handler(commands=["edit"], state=Form.logged_in)
 async def edit_ticket(message: types.Message):
     """Reacts on /edit command for logged user"""
@@ -107,11 +110,20 @@ async def edit_ticket(message: types.Message):
     await generic.edit_ticket(message.from_user.id)
 
 
-@dp.message_handler(state=Form.to_enter_title)
-async def to_enter_title(message: types.Message):
+@dp.message_handler(content_types=types.ContentTypes.TEXT, state=Form.to_enter_title)
+async def to_enter_title(message: types.Message) -> None:
     """Reacts on every text entered with the state Form.to_enter_title"""
-    logging.info("%d", message.from_user.id)
-    await generic.process_to_enter_title(message.from_user.id, message.text)
+    user_id: int = message.from_user.id
+    text = message.text
+    if message.is_command():
+        await onboarding.process_cancel(
+            user_id,
+            None,
+            "Что-то пошло не так? Давайте попробуем начать сначала. Введите /help для помощи",
+        )
+        return
+
+    await generic.process_to_enter_title(user_id, text)
 
 
 @dp.message_handler(state=Form.to_select_ticket_number)
@@ -125,13 +137,39 @@ async def to_select_ticket_number(message: types.Message):
 # ===============================================================
 
 
+@dp.message_handler(content_types=types.ContentTypes.TEXT, state="*")
+async def text_message(message: types.Message, state: FSMContext) -> None:
+    """Process any unhandled text messages"""
+    user_id: int = message.from_user.id
+    text: str = message.text
+
+    current_state: Union[str, None] = await state.get_state()
+    logging.info(
+        "User ID %d provided unhandled text input: %s. Status: %s",
+        user_id,
+        text,
+        current_state,
+    )
+
+    await generic.text_message(user_id)
+
+
 @dp.message_handler(state="*")
-async def text_message(message):
-    """Default behaviour"""
-    logging.info("%d", message.from_user.id)
-    await generic.text_message(message)
+async def non_text_message(message: types.Message, state: FSMContext) -> None:
+    """Process any unhandled non-text messages"""
+    user_id: int = message.from_user.id
+
+    current_state: Union[str, None] = await state.get_state()
+    logging.info(
+        "User ID %d provided unhandled non-text input. Status: %s",
+        user_id,
+        current_state,
+    )
+
+    await generic.text_message(user_id)
 
 
 if __name__ == "__main__":
-    executor.start_polling(dp, skip_updates=True)
     logging.info("GLPI Telegram bot has started")
+    executor.start_polling(dp, skip_updates=True)
+    logging.info("GLPI Telegram bot is closed")

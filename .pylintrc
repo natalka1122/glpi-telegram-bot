@@ -16,7 +16,7 @@ extension-pkg-whitelist=vedis
 # --enable=similarities". If you want to run only the classes checker, but have
 # no Warning level messages displayed, use"--disable=all --enable=classes
 # --disable=W"
-disable=R0904,locally-disables,c-extension-no-member,too-many-public-methods
+disable=R0904,locally-disables,c-extension-no-member,too-many-public-methods,fixme
 
 [FORMAT]
 

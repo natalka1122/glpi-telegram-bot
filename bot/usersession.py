@@ -1,4 +1,5 @@
 """Module for UserSession class"""
+from typing import List, Dict
 import config
 import bot.glpi_api as glpi_api
 from bot.app import core
@@ -18,6 +19,7 @@ class UserSession:
     """
 
     # TODO Add support for password change of password
+    # TODO Catch errors
 
     URL = config.GLPI_BASE_URL
 
@@ -49,7 +51,7 @@ class UserSession:
         ):
             pass
 
-    def get_all_tickets(self):
+    def get_all_tickets(self) -> List[Dict]:
         """
         Return all tickets
         """

@@ -1,19 +1,75 @@
 """General ticket manipulations
 """
+from typing import Dict, List, Callable
+from html2text import html2text
+
 MAX_MESSAGE_LENGTH = 2000
+UNKNOWN = "Мама, это какое-то неизвестное науке число"
 STATUS = {1: "Новый", 2: "В работе"}
+URGENCY = {
+    1: "Очень низкий",
+    2: "Низкий",
+    3: "Средний",
+    4: "Высокая",
+    5: "Очень высокая",
+}
 
 
-def show_ticket(ticket, max_len=MAX_MESSAGE_LENGTH):
-    """Show ticket in chunks (when needed)"""
-    result = []
-    result.append("ID: {}".format(ticket["id"]))
-    result.append("Заголовок: {}".format(ticket["name"]))
-    result.append("Дата открытия: {}".format(ticket["date"]))
-    if ticket["status"] in STATUS:
-        result.append("Статус: {}".format(STATUS[ticket["status"]]))
-    else:
-        result.append(
-            "Статус: {} Мама, это какой-то неизвестный статус!".format(ticket["status"])
+def int_to_status(num: int) -> str:
+    """User-friendly status description
+
+    Args:
+        num (int): status_id
+
+    Returns:
+        str: Status description
+    """
+    if num in STATUS:
+        return STATUS[num]
+    return UNKNOWN + ": " + str(num)
+
+
+def int_to_urgency(num: int) -> str:
+    """User-friendly urgency description
+
+    Args:
+        num (int): status_id
+
+    Returns:
+        str: Urgency description
+    """
+    if num in URGENCY:
+        return URGENCY[num]
+    return UNKNOWN + ": " + str(num)
+
+
+async def show_ticket(
+    ticket: Dict, send_message: Callable, user_id, max_len: int = MAX_MESSAGE_LENGTH
+) -> None:
+    """Show ticket in chunks when needed"""
+    result: List = []
+    result.append("Заявка с номером {} '{}'".format(ticket["id"], ticket["name"]))
+    result.append(
+        "Статус: {} Срочность: {} Дата открытия: {}".format(
+            int_to_status(ticket["status"]),
+            int_to_urgency(ticket["urgency"]),
+            ticket["date"],
         )
-    return (result[i : i + max_len] for i in range(0, len(result), max_len))
+    )
+    # TODO: Fix <p> and may be somethings more
+    result.append("Содержание: {}".format(html2text(ticket["content"])))
+
+    buffer = ""
+    for line in result:
+        if len(buffer + line) <= max_len:
+            if len(buffer) == 0:
+                buffer = line
+            else:
+                buffer += "\n" + line
+            continue
+
+        if len(buffer) > 0:
+            await send_message(user_id, buffer)
+
+    if len(buffer) > 0:
+        await send_message(user_id, buffer)
