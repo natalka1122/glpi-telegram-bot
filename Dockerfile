@@ -24,6 +24,8 @@ USER user
 
 ENV DATA_DIR="/data"
 COPY --from=builder /root/.local/bin ${HOME}/.local
-COPY . .
+COPY .env .
+COPY *.py .
+COPY bot .
 
 ENTRYPOINT ["/tini", "--", "python", "main.py"]
