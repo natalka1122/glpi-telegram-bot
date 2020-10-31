@@ -1,20 +1,26 @@
-FROM alpine
+FROM python:3.7.9 AS builder
+COPY requirements.txt .
 
-RUN apk add --no-cache build-base  python3 python3-dev && \
-    if [ ! -e /usr/bin/python ]; then ln -sf python3 /usr/bin/python ; fi && \
-    \
-    echo "**** install pip ****" && \
-    python3 -m ensurepip && \
-    rm -r /usr/lib/python*/ensurepip && \
-    pip3 install --no-cache --upgrade pip setuptools wheel && \
-    if [ ! -e /usr/bin/pip ]; then ln -s pip3 /usr/bin/pip ; fi
+RUN pip install --upgrade pip setuptools wheel
+RUN pip install --user -r requirements.txt
 
-WORKDIR /app
+FROM python:3.7.9-slim-buster
 
-COPY requirements.txt ./
+ARG GIT_HASH
+ENV GIT_HASH=${GIT_HASH:-dev}
+ENV TINI_VERSION="v0.19.0"
 
-RUN pip install --no-cache-dir -r requirements.txt
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
+RUN chmod +x /tini
 
+
+WORKDIR /project
+
+RUN useradd -m -r user && chown user /project
+
+USER user
+
+COPY --from=builder /root/.local/bin ${$HOME}/.local
 COPY . .
 
-CMD [ "python", "./main.py" ]
+ENTRYPOINT ["/tini", "--", "python", "main.py"]
