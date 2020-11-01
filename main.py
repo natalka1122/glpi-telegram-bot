@@ -170,6 +170,6 @@ async def non_text_message(message: types.Message, state: FSMContext) -> None:
 
 
 if __name__ == "__main__":
-    logging.info("GLPI Telegram bot has started")
+    logging.info("GLPI Telegram bot is started")
     executor.start_polling(dp, skip_updates=True)
     logging.info("GLPI Telegram bot is closed")
