@@ -78,30 +78,6 @@ async def process_to_enter_title(user_id: int, title: str) -> None:
     )
 
 
-async def edit_ticket(user_id: int) -> None:
-    """Promts for ticket to edit
-
-    Args:
-        user_id (int): telegram user id that issued command
-    """
-    logging.debug("%d /edit command", user_id)
-    list_tickets = UserSession(user_id).get_all_tickets()
-    if len(list_tickets) == 0:
-        await Form.logged_in.set()
-        await bot.send_message(user_id, "Нет никаких тикетов")
-        return
-
-    for current_ticket in list_tickets:
-        await bot.send_message(
-            user_id, "Номер: %d Тема: %s", current_ticket["id"], current_ticket["name"]
-        )
-
-    await Form.to_select_ticket_number.set()
-    await bot.send_message(
-        user_id, "Введите, пожалуйста, номер тикета для редактирования"
-    )
-
-
 async def process_to_select_ticket_number(user_id: int, ticket_id: int) -> None:
     """Edit provided ticket
 
