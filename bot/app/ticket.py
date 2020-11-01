@@ -49,13 +49,9 @@ async def show_ticket(
     """Show ticket in chunks when needed"""
     result: List = []
     result.append("Заявка с номером {} '{}'".format(ticket["id"], ticket["name"]))
-    result.append(
-        "Статус: {} Срочность: {} Дата открытия: {}".format(
-            int_to_status(ticket["status"]),
-            int_to_urgency(ticket["urgency"]),
-            ticket["date"],
-        )
-    )
+    result.append("Статус: {}".format(int_to_status(ticket["status"])))
+    result.append("Срочность: {}".format(int_to_urgency(ticket["urgency"])))
+    result.append("Дата открытия: {}".format(ticket["date"]))
     # TODO: Fix <p> and may be somethings more
     result.append("Содержание: {}".format(html2text(ticket["content"])))
 
