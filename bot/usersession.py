@@ -1,5 +1,5 @@
 """Module for UserSession class"""
-from typing import List, Dict
+from typing import List, Dict, Any
 import config
 import bot.glpi_api as glpi_api
 from bot.app import core
@@ -51,6 +51,25 @@ class UserSession:
         ):
             pass
 
+    def add_field(self, key: str, data: Any) -> None:
+        """Add datafield to user_id in database
+
+        Args:
+            key (str): key to add
+            data (Any): value to add
+        """
+        core.db_connect.add_field(self.user_id, key, data)
+
+    def pop_field(self, key: str) -> str:
+        """Delete and return field to database record
+
+        Args:
+            key (int): normally user_id
+            sub_key (str): user attribute
+            value (Any): value if user_attribute
+        """
+        return core.db_connect.pop_field(self.user_id, key)
+
     def get_all_tickets(self) -> List[Dict]:
         """
         Return all tickets
@@ -60,14 +79,17 @@ class UserSession:
         ) as glpi:
             return glpi.get_all_items("ticket")
 
-    def create_ticket(self, title):
+    def create_ticket(self, title, description, urgency):
         """
         Create one ticket with specified title
         """
         with glpi_api.connect(
             url=self.URL, auth=(self.login, self.password), apptoken=""
         ) as glpi:
-            result = glpi.add("ticket", {"name": title})
+            result = glpi.add(
+                "ticket",
+                {"name": title, "content": description, "urgency": urgency},
+            )
         # [{'id': 1309, 'message': 'Объект успешно добавлен: dds'}]
         if isinstance(result, list) and len(result) == 1 and "id" in result[0]:
             return result[0]["id"]

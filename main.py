@@ -133,6 +133,28 @@ async def to_enter_title(message: types.Message) -> None:
     await generic.process_to_enter_title(user_id, text)
 
 
+@dp.message_handler(
+    content_types=types.ContentTypes.TEXT, state=Form.to_enter_description
+)
+async def to_enter_description(message: types.Message) -> None:
+    """Reacts on every text entered with the state Form.to_enter_description"""
+    user_id: int = message.from_user.id
+    text = message.text
+
+    await generic.process_to_enter_description(user_id, text)
+
+
+@dp.message_handler(
+    content_types=types.ContentTypes.TEXT, state=Form.to_select_priority
+)
+async def to_select_priority(message: types.Message) -> None:
+    """Reacts on every text entered with the state Form.to_select_priority"""
+    user_id: int = message.from_user.id
+    text = message.text
+
+    await generic.process_to_select_priority(user_id, text)
+
+
 # UNKNOWN input
 # ===============================================================
 

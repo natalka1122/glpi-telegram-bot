@@ -4,6 +4,7 @@ import logging
 from typing import List, Dict
 
 from bot.app.core import bot, create_user_session
+from bot.app.keyboard import select_urgent_keyboard
 from bot.app.state import Form
 from bot.app.ticket import show_ticket
 from bot.usersession import StupidError, UserSession
@@ -62,61 +63,46 @@ async def process_to_enter_title(user_id: int, title: str) -> None:
         user_id (int): telegram user id that issued command
         title (str): title for new ticket
     """
-    try:
-        ticket_id = UserSession(user_id).create_ticket(title)
-    except StupidError as err:
-        logging.error("%s", err)
-        await Form.logged_in.set()
-        await bot.send_message(user_id, "Ничего не получилось и вылезла ошибка")
-        return
+    UserSession(user_id).add_field("title", title)
 
-    await Form.logged_in.set()
+    await Form.to_enter_description.set()
     await bot.send_message(
         user_id,
-        "Обращение номер %d создано. Введите /edit для редактирования",
-        ticket_id,
+        'Тема вашей заявки "{}". Введите описание возникшей проблемы'.format(title),
     )
 
 
-async def process_to_select_ticket_number(user_id: int, ticket_id: int) -> None:
-    """Edit provided ticket
+async def process_to_enter_description(user_id: int, description: str) -> None:
+    """Create new ticket with provided title and description
 
     Args:
         user_id (int): telegram user id that issued command
-        ticket_id (int): ticket id for editing
+        description (str): title for new ticket
     """
-    try:
-        ticket_id = int(ticket_id)
-    except ValueError:
-        logging.error("Ну кто вводит буквы вместо циферок: %d", ticket_id)
-        await Form.logged_in.set()
-        await bot.send_message(
-            user_id,
-            "Ну кто мне тут вводит буквы вместо циферок? Начинай, хулиган, заново!",
-        )
-        return
+    UserSession(user_id).add_field("description", description)
 
-    logging.debug("%d process_to_select_ticket_number", user_id)
-    try:
-        ticket = UserSession(user_id).get_one_ticket(ticket_id)
-    except StupidError as err:
-        logging.error("%s", err)
-        await Form.logged_in.set()
-        await bot.send_message(user_id, "Ничего не получилось и вылезла ошибка")
-        return
+    await Form.to_select_priority.set()
+    await bot.send_message(
+        user_id, "Выберите приоритет", reply_markup=select_urgent_keyboard
+    )
 
-    if ticket is None:
-        logging.error("Not found %d", ticket_id)
-        await Form.logged_in.set()
-        await bot.send_message(user_id, "Тикет не найден. Начинайте заново.")
-        return
 
-    logging.debug("Получилось! %s", ticket)
+async def process_to_select_priority(user_id: int, priority: str) -> None:
+    """Create new ticket with provided title, description and priority
+
+    Args:
+        user_id (int): telegram user id that issued command
+        description (str): title for new ticket
+    """
+    current_user = UserSession(user_id)
+    title = current_user.pop_field("title")
+    description = current_user.pop_field("description")
+    ticket_id = current_user.create_ticket(title, description, priority)
+
     await Form.logged_in.set()
     await bot.send_message(
-        user_id, "Вот ваш тикет: %s. И какое поле в нем мы хотим поменять? ", ticket
+        user_id, 'Заявка "{}" принята. Номер заявки - {}'.format(title, ticket_id)
     )
-    await not_implemented(user_id)
 
 
 async def not_implemented(user_id: int) -> None:

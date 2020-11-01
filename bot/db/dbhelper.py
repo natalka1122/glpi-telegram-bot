@@ -1,6 +1,7 @@
 """Manage comunication with vedis database
 """
 import json
+from typing import Any
 import vedis
 
 
@@ -22,6 +23,35 @@ class DBHelper:
         """
         with self._database.transaction():
             self._database.set(key, json.dumps(value))
+
+    def add_field(self, key: int, sub_key: str, value: Any) -> None:
+        """Add field to database record
+
+        Args:
+            key (int): normally user_id
+            sub_key (str): user attribute
+            value (Any): value if user_attribute
+        """
+        # TODO Test me
+        with self._database.transaction():
+            data = json.loads(self._database[key].decode("utf8"))
+            data[sub_key] = value
+            self._database[key] = json.dumps(data)
+
+    def pop_field(self, key: int, sub_key: str) -> str:
+        """Delete and return field to database record
+
+        Args:
+            key (int): normally user_id
+            sub_key (str): user attribute
+            value (Any): value if user_attribute
+        """  # TODO Test me
+        with self._database.transaction():
+            data = json.loads(self._database[key].decode("utf8"))
+            result = data[sub_key]
+            del data[sub_key]
+            self._database[key] = json.dumps(data)
+            return result
 
     def delete_data(self, key: int) -> None:
         """Delete data from corresponding key

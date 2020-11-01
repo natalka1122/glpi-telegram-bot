@@ -34,6 +34,7 @@ async def create_user_session(user_id: int) -> None:
         user_id (int): telegram user id
     """
     # TODO: handle logged in users who wants to logout
+    # TODO: General fix here neededs
     user_data = db_connect.get_data(user_id)
     logging.debug("create_user_session: user_data = %s", user_data)
 
@@ -45,7 +46,7 @@ async def create_user_session(user_id: int) -> None:
     logging.info("found user_session. NOT IMPLEMENTED")
     await bot.send_message(
         user_id,
-        "Вас приветсвует супер-бот СКИТ.\n"
-        "Введите /list, что бы получить список тикетов.\n"
-        "Введите /add, что бы создать тикет. Введите /edit, что бы отредактировать тикет",
+        "Вас приветсвует супер-бот СКИТ\n"
+        "Введите /tickets, что бы получить список заявок\n"
+        "Введите /add, что бы создать заявку",
     )
