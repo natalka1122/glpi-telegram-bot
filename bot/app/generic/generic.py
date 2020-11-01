@@ -22,7 +22,9 @@ async def start_message(user_id: int):
     else:
         logging.info("User %d already logged in", user_id)
         await Form.logged_in.set()
-        await bot.send_message(user_id, "Вы уж залогинены. Если хотите разлогинится, то введите /logout")
+        await bot.send_message(
+            user_id, "Вы уж залогинены. Если хотите разлогинится, то введите /logout"
+        )
 
 
 async def list_all_tickets(user_id: int):

@@ -28,6 +28,7 @@ async def start_message(message: types.Message, state: FSMContext) -> None:
 
     await generic.start_message(user_id)
 
+
 @dp.message_handler(commands=["/help"], state="*")
 async def help_message(message: types.Message, state: FSMContext) -> None:
     """Reacts on /help command in every state"""
@@ -38,6 +39,7 @@ async def help_message(message: types.Message, state: FSMContext) -> None:
 
     await generic.not_implemented(user_id)
 
+
 @dp.message_handler(commands=["logout"], state="*")
 async def logout_message(message: types.Message, state: FSMContext) -> None:
     """Reacts on /logout command in every state"""
@@ -47,6 +49,7 @@ async def logout_message(message: types.Message, state: FSMContext) -> None:
     logging.info("User ID %d issued /logout command. State: %s", user_id, current_state)
 
     await generic.not_implemented(user_id)
+
 
 # ONBOARDING
 # =======================================================
