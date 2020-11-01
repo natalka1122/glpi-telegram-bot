@@ -15,9 +15,14 @@ async def start_message(user_id: int):
     Args:
         user_id (int): telegram user id that issued /start command
     """
-    # TODO: Ask logged user if he wants to logout
-    logging.debug("%d /start command", user_id)
-    await create_user_session(user_id)
+    try:
+        UserSession(user_id)
+    except StupidError:
+        await create_user_session(user_id)
+    else:
+        logging.info("User %d already logged in", user_id)
+        await Form.logged_in.set()
+        await bot.send_message(user_id, "Вы уж залогинены. Если хотите разлогинится, то введите /logout")
 
 
 async def list_all_tickets(user_id: int):

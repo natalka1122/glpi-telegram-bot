@@ -28,6 +28,25 @@ async def start_message(message: types.Message, state: FSMContext) -> None:
 
     await generic.start_message(user_id)
 
+@dp.message_handler(commands=["/help"], state="*")
+async def help_message(message: types.Message, state: FSMContext) -> None:
+    """Reacts on /help command in every state"""
+    # TODO add /help command
+    user_id: int = message.from_user.id
+    current_state: Union[str, None] = await state.get_state()
+    logging.info("User ID %d issued /helo command. State: %s", user_id, current_state)
+
+    await generic.not_implemented(user_id)
+
+@dp.message_handler(commands=["logout"], state="*")
+async def logout_message(message: types.Message, state: FSMContext) -> None:
+    """Reacts on /logout command in every state"""
+    # TODO add /logout command
+    user_id: int = message.from_user.id
+    current_state: Union[str, None] = await state.get_state()
+    logging.info("User ID %d issued /logout command. State: %s", user_id, current_state)
+
+    await generic.not_implemented(user_id)
 
 # ONBOARDING
 # =======================================================
