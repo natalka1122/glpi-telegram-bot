@@ -53,7 +53,9 @@ async def show_ticket(
     result.append("Статус: {}".format(int_to_status(ticket["status"])))
     result.append("Срочность: {}".format(int_to_urgency(ticket["urgency"])))
     result.append("Дата открытия: {}".format(ticket["date"]))
-    result.append("Содержание: {}".format(html2markdown.convert(html2text(ticket["content"]))))
+    result.append(
+        "Содержание: {}".format(html2markdown.convert(html2text(ticket["content"])))
+    )
 
     buffer = ""
     for line in result:
@@ -82,7 +84,6 @@ async def show_ticket(
 
         if len(line) > 0:
             await send_message(user_id, line)
-
 
     if len(buffer) > 0:
         await send_message(user_id, buffer)
