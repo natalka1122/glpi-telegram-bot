@@ -2,6 +2,7 @@
 """
 from typing import Dict, List, Callable
 from html2text import html2text
+import html2markdown
 
 MAX_MESSAGE_LENGTH = 2000
 UNKNOWN = "Мама, это какое-то неизвестное науке число"
@@ -52,8 +53,7 @@ async def show_ticket(
     result.append("Статус: {}".format(int_to_status(ticket["status"])))
     result.append("Срочность: {}".format(int_to_urgency(ticket["urgency"])))
     result.append("Дата открытия: {}".format(ticket["date"]))
-    # TODO: Fix <p> and may be somethings more
-    result.append("Содержание: {}".format(html2text(ticket["content"])))
+    result.append("Содержание: {}".format(html2markdown.convert(html2text(ticket["content"]))))
 
     buffer = ""
     for line in result:
