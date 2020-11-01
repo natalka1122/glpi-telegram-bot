@@ -57,6 +57,7 @@ async def show_ticket(
 
     buffer = ""
     for line in result:
+        line = str.strip(line)
         if len(buffer + line) <= max_len:
             if len(buffer) == 0:
                 buffer = line
@@ -64,8 +65,24 @@ async def show_ticket(
                 buffer += "\n" + line
             continue
 
+        # len(buffer) + line > max_len
         if len(buffer) > 0:
             await send_message(user_id, buffer)
+        if len(line) < max_len:
+            buffer = line
+            continue
+
+        # len(line) > max_len
+        buffer = ""
+        while len(line) > max_len:
+            chunk = str.strip(line[:max_len])
+            if len(chunk) > 0:
+                await send_message(user_id, chunk)
+            line = str.strip(line[max_len:])
+
+        if len(line) > 0:
+            await send_message(user_id, line)
+
 
     if len(buffer) > 0:
         await send_message(user_id, buffer)
