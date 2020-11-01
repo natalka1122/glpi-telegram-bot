@@ -124,35 +124,13 @@ async def add_ticket(message: types.Message, state: FSMContext) -> None:
     await generic.add_new_ticket(user_id)
 
 
-# TODO Elimitate /edit command
-@dp.message_handler(commands=["edit"], state=Form.logged_in)
-async def edit_ticket(message: types.Message):
-    """Reacts on /edit command for logged user"""
-    logging.info("%d", message.from_user.id)
-    await generic.edit_ticket(message.from_user.id)
-
-
 @dp.message_handler(content_types=types.ContentTypes.TEXT, state=Form.to_enter_title)
 async def to_enter_title(message: types.Message) -> None:
     """Reacts on every text entered with the state Form.to_enter_title"""
     user_id: int = message.from_user.id
     text = message.text
-    if message.is_command():
-        await onboarding.process_cancel(
-            user_id,
-            None,
-            "Что-то пошло не так? Давайте попробуем начать сначала. Введите /help для помощи",
-        )
-        return
 
     await generic.process_to_enter_title(user_id, text)
-
-
-@dp.message_handler(state=Form.to_select_ticket_number)
-async def to_select_ticket_number(message: types.Message):
-    """Default behaviour"""
-    logging.info("%d", message.from_user.id)
-    await generic.process_to_select_ticket_number(message.from_user.id, message.text)
 
 
 # UNKNOWN input

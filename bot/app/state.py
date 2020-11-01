@@ -17,7 +17,3 @@ class Form(StatesGroup):
 
     to_confirm_closure = State()  # 'Form:to_confirm_closure'
     to_explain_decline = State()  # 'Form:to_explain_decline'
-
-    # TODO: ELiminate these
-    to_select_ticket_number = State()  # 'Form:to_select_ticket_number'
-    to_select_edit_field = State()  # 'Form:to_select_edit_field'
