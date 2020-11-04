@@ -4,8 +4,8 @@ services:
   rtkskit:
     build: .
     restart: unless-stopped
-#    environment:
-#      - TELEGRAM_TOKEN:"TO_REPLACE"
-#      - GLPI_BASE_URL:"http://TO_REPLACE/apirest.php/"
+    environment:
+      - TELEGRAM_TOKEN:${TELEGRAM_TOKEN}
+      - GLPI_BASE_URL:${GLPI_BASE_URL}
 #    volumes:
 #        - /TO_REPLACE:/data
