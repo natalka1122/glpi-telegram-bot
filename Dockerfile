@@ -1,31 +1,23 @@
-FROM python:3.7.9 AS builder
+FROM alpine
 
-RUN pip install --upgrade pip setuptools wheel
-
-COPY requirements.txt .
-RUN pip install --user -r requirements.txt
-
-FROM python:3.7.9-slim-buster
-
-ARG GIT_HASH
-ENV GIT_HASH=${GIT_HASH:-dev}
-
-ENV TINI_VERSION="v0.19.0"
-ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
-RUN chmod +x /tini
-
+RUN apk add --no-cache build-base  python3 python3-dev && \
+    if [ ! -e /usr/bin/python ]; then ln -sf python3 /usr/bin/python ; fi && \
+    \
+    echo "**** install pip ****" && \
+    python3 -m ensurepip && \
+    rm -r /usr/lib/python*/ensurepip && \
+    pip3 install --no-cache --upgrade pip setuptools wheel && \
+    if [ ! -e /usr/bin/pip ]; then ln -s pip3 /usr/bin/pip ; fi
 
 WORKDIR /project
 
-RUN useradd -m -r user && chown user /project && mkdir /data && chown user /data
+COPY requirements.txt ./
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+RUN mkdir /data
 VOLUME [ "/data" ]
 
-USER user
+COPY . .
 
-ENV DATA_DIR="/data"
-COPY --from=builder /root/.local/bin ${HOME}/.local
-COPY .env .
-COPY *.py .
-COPY bot .
-
-ENTRYPOINT ["/tini", "--", "python", "main.py"]
+ENTRYPOINT ["python", "main.py"]
