@@ -7,6 +7,9 @@ import sys
 
 from dotenv import load_dotenv
 
+WE_ARE_CLOSING = False
+CHECK_PERIOD = 20
+
 load_dotenv()
 
 TELEGRAM_TOKEN: str = os.getenv("TELEGRAM_TOKEN")

@@ -3,15 +3,18 @@ Main exec file for telegram bot.
 """
 
 import logging
+import threading
 from typing import Union
 
 from aiogram import types
 from aiogram.dispatcher import FSMContext
 from aiogram.utils import executor
 
+from bot.app import checker
 from bot.app.core import dp
 from bot.app.generic import generic, onboarding
 from bot.app.state import Form
+import config
 
 
 # TODO add /help
@@ -192,6 +195,10 @@ async def non_text_message(message: types.Message, state: FSMContext) -> None:
 
 
 if __name__ == "__main__":
+    th = threading.Thread(target=checker.my_thread_func)
+    th.start()
     logging.info("GLPI Telegram bot is started")
     executor.start_polling(dp, skip_updates=True)
     logging.info("GLPI Telegram bot is closed")
+    config.WE_ARE_CLOSING = True
+    th.join()
