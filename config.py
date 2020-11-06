@@ -28,7 +28,7 @@ if GLPI_BASE_URL is None:
     )
     sys.exit(1)
 
-_data_dir: str = os.getenv("DATA_DIR", default="data/")
+_data_dir: str = os.getenv("DATA_DIR", default="/data")
 os.makedirs(_data_dir, exist_ok=True)
 DB_FILE: str = _data_dir + "db.db"
 STATE_FILE: str = _data_dir + "state.json"
