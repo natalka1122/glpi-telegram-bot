@@ -5,6 +5,8 @@ import config
 
 
 def run_check():
+    """Check for every user if it has updates
+    """
     print("Do something")
 
 
