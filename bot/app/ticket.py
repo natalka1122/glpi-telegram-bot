@@ -48,14 +48,13 @@ async def show_ticket(
     ticket: Dict, send_message: Callable, user_id, max_len: int = MAX_MESSAGE_LENGTH
 ) -> None:
     """Show ticket in chunks when needed"""
+    content = html2markdown.convert(html2text(str(ticket["content"])))
     result: List = []
     result.append("Заявка с номером {} '{}'".format(ticket["id"], ticket["name"]))
     result.append("Статус: {}".format(int_to_status(ticket["status"])))
     result.append("Срочность: {}".format(int_to_urgency(ticket["urgency"])))
     result.append("Дата открытия: {}".format(ticket["date"]))
-    result.append(
-        "Содержание: {}".format(html2markdown.convert(html2text(ticket["content"])))
-    )
+    result.append("Содержание: {}".format(content))
 
     buffer = ""
     for line in result:
