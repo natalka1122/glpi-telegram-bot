@@ -26,6 +26,7 @@ class UserSession:
         read data from database.
     """
 
+    # TODO Write a proper docstring
     # TODO Add support for password change of password
     # TODO Catch errors
 
