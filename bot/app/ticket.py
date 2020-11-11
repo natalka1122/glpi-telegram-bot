@@ -44,8 +44,30 @@ def int_to_urgency(num: int) -> str:
     return UNKNOWN + ": " + str(num)
 
 
+def urgency_to_int(urgency: str) -> int:
+    """Convert urgency-description to integer
+
+    Args:
+        urgency (str): User-friendly urgency description
+
+    Raises:
+        KeyError: If no such urgency
+
+    Returns:
+        int: for glpi-system
+    """
+    for key in URGENCY:
+        if URGENCY[key] == urgency:
+            return key
+    raise KeyError
+
+
 async def show_ticket(
-    ticket: Dict, send_message: Callable, user_id, max_len: int = MAX_MESSAGE_LENGTH
+    ticket: Dict,
+    send_message: Callable,
+    user_id,
+    max_len: int = MAX_MESSAGE_LENGTH,
+    **kwargs
 ) -> None:
     """Show ticket in chunks when needed"""
     content = html2markdown.convert(html2text(str(ticket["content"])))
@@ -78,11 +100,11 @@ async def show_ticket(
         while len(line) > max_len:
             chunk = str.strip(line[:max_len])
             if len(chunk) > 0:
-                await send_message(user_id, chunk)
+                await send_message(user_id, chunk, **kwargs)
             line = str.strip(line[max_len:])
 
         if len(line) > 0:
-            await send_message(user_id, line)
+            await send_message(user_id, line, **kwargs)
 
     if len(buffer) > 0:
-        await send_message(user_id, buffer)
+        await send_message(user_id, buffer, **kwargs)

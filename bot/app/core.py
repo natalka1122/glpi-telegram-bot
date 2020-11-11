@@ -4,7 +4,7 @@ import logging
 import sys
 
 from aiogram import Bot, Dispatcher
-from aiogram.contrib.fsm_storage.files import JSONStorage
+from aiogram.dispatcher import FSMContext
 
 import config
 from bot.app.generic import onboarding
@@ -21,21 +21,20 @@ logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 
 # sessions = expiringdict.ExpiringDict(max_len=2000, max_age_seconds=60 * 60 * 24)
 
-db_connect = DBHelper(config.DB_FILE)
+# db_connect = DBHelper(config.DB_FILE)
 
 bot = Bot(token=config.TELEGRAM_TOKEN)
-dp = Dispatcher(bot, storage=JSONStorage(config.STATE_FILE))
+dp = Dispatcher(bot, storage=DBHelper(config.DB_FILE))
 
 
-async def create_user_session(user_id: int) -> None:
+async def create_user_session(user_id: int, state: FSMContext) -> None:
     """Initiate user session
 
     Args:
         user_id (int): telegram user id
     """
-    # TODO: handle logged in users who wants to logout
     # TODO: General fix here neededs
-    user_data = db_connect.get_data(user_id)
+    user_data = await state.get_data()
     logging.debug("create_user_session: user_data = %s", user_data)
 
     if user_data is None:

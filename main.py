@@ -8,18 +8,20 @@ from typing import Union
 
 from aiogram import types
 from aiogram.dispatcher import FSMContext
+
+# from aiogram.dispatcher.filters import state
 from aiogram.utils import executor
+from aiogram.utils.exceptions import NetworkError
 
 from bot.app import checker
 from bot.app.core import dp
 from bot.app.generic import generic, onboarding
-from bot.app.state import Form
+from bot.app.bot_state import Form
 import config
 
 
 # TODO add /help
 # TODO add /cancel
-# TODO add logout process
 
 
 @dp.message_handler(commands=["start"], state="*")
@@ -29,7 +31,7 @@ async def start_message(message: types.Message, state: FSMContext) -> None:
     current_state: Union[str, None] = await state.get_state()
     logging.info("User ID %d issued /start command. State: %s", user_id, current_state)
 
-    await generic.start_message(user_id)
+    await generic.start_message(user_id, state)
 
 
 @dp.message_handler(commands=["/help"], state="*")
@@ -38,7 +40,7 @@ async def help_message(message: types.Message, state: FSMContext) -> None:
     # TODO add /help command
     user_id: int = message.from_user.id
     current_state: Union[str, None] = await state.get_state()
-    logging.info("User ID %d issued /helo command. State: %s", user_id, current_state)
+    logging.info("User ID %d issued /help command. State: %s", user_id, current_state)
 
     await generic.not_implemented(user_id)
 
@@ -46,12 +48,11 @@ async def help_message(message: types.Message, state: FSMContext) -> None:
 @dp.message_handler(commands=["logout"], state="*")
 async def logout_message(message: types.Message, state: FSMContext) -> None:
     """Reacts on /logout command in every state"""
-    # TODO add /logout command
     user_id: int = message.from_user.id
     current_state: Union[str, None] = await state.get_state()
     logging.info("User ID %d issued /logout command. State: %s", user_id, current_state)
 
-    await generic.not_implemented(user_id)
+    await generic.logout(user_id=user_id, state=state)
 
 
 # ONBOARDING
@@ -83,7 +84,7 @@ async def process_to_enter_login(message: types.Message, state: FSMContext) -> N
 async def to_enter_password(message: types.Message, state: FSMContext) -> None:
     """Reacts on every text entered with the state Form.to_enter_password"""
     user_id: int = message.from_user.id
-    text: str = message.text
+    password: str = message.text
 
     current_state: Union[str, None] = await state.get_state()
     logging.info(
@@ -98,7 +99,7 @@ async def to_enter_password(message: types.Message, state: FSMContext) -> None:
         )
         return
 
-    await onboarding.process_to_enter_password(user_id, text, state)
+    await onboarding.process_to_enter_password(user_id, password, state)
 
 
 # TICKETS
@@ -114,7 +115,7 @@ async def list_all_tickets(message: types.Message, state: FSMContext) -> None:
         "User ID %d issued /tickets command. State: %s", user_id, current_state
     )
 
-    await generic.list_all_tickets(user_id)
+    await generic.list_all_tickets(user_id=user_id, state=state)
 
 
 @dp.message_handler(commands=["add"], state=Form.logged_in)
@@ -124,38 +125,42 @@ async def add_ticket(message: types.Message, state: FSMContext) -> None:
     current_state: Union[str, None] = await state.get_state()
     logging.info("User ID %d issued /add command. State: %s", user_id, current_state)
 
-    await generic.add_new_ticket(user_id)
+    await generic.add_new_ticket(user_id=user_id)
 
 
 @dp.message_handler(content_types=types.ContentTypes.TEXT, state=Form.to_enter_title)
-async def to_enter_title(message: types.Message) -> None:
+async def to_enter_title(message: types.Message, state: FSMContext) -> None:
     """Reacts on every text entered with the state Form.to_enter_title"""
     user_id: int = message.from_user.id
     text = message.text
 
-    await generic.process_to_enter_title(user_id, text)
+    await generic.process_to_enter_title(user_id=user_id, title=text, state=state)
 
 
 @dp.message_handler(
     content_types=types.ContentTypes.TEXT, state=Form.to_enter_description
 )
-async def to_enter_description(message: types.Message) -> None:
+async def to_enter_description(message: types.Message, state: FSMContext) -> None:
     """Reacts on every text entered with the state Form.to_enter_description"""
     user_id: int = message.from_user.id
     text = message.text
 
-    await generic.process_to_enter_description(user_id, text)
+    await generic.process_to_enter_description(
+        user_id=user_id, description=text, state=state
+    )
 
 
 @dp.message_handler(
     content_types=types.ContentTypes.TEXT, state=Form.to_select_priority
 )
-async def to_select_priority(message: types.Message) -> None:
+async def to_select_priority(message: types.Message, state: FSMContext) -> None:
     """Reacts on every text entered with the state Form.to_select_priority"""
     user_id: int = message.from_user.id
     text = message.text
 
-    await generic.process_to_select_priority(user_id, text)
+    await generic.process_to_select_priority(
+        user_id=user_id, priority=text, state=state
+    )
 
 
 # UNKNOWN input
@@ -198,7 +203,15 @@ if __name__ == "__main__":
     th = threading.Thread(target=checker.my_thread_func)
     th.start()
     logging.info("GLPI Telegram bot is started")
-    executor.start_polling(dp, skip_updates=True)
+    while True:
+        try:
+            executor.start_polling(dp, skip_updates=True)
+        except NetworkError:
+            logging.error("Network Error. Restarting...")
+            continue
+        else:
+            break
+
     logging.info("GLPI Telegram bot is closed")
     config.WE_ARE_CLOSING = True
     th.join()

@@ -31,7 +31,6 @@ if GLPI_BASE_URL is None:
 _data_dir: str = os.getenv("DATA_DIR", default="/data/")
 os.makedirs(_data_dir, exist_ok=True)
 DB_FILE: str = _data_dir + "db.db"
-STATE_FILE: str = _data_dir + "state.json"
 LOG_FILENAME: str = _data_dir + "log.txt"
 
 _log_level: str = os.getenv("LOG_LEVEL", default="").upper()

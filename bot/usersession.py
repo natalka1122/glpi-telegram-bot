@@ -1,8 +1,16 @@
 """Module for UserSession class"""
-from typing import List, Dict, Any
+import logging
+import typing
+
+from aiogram.dispatcher.storage import FSMContext
 import config
 import bot.glpi_api as glpi_api
-from bot.app import core
+
+# from bot.app import core
+
+LOGIN = "login"
+PASSWORD = "password"
+LOGGED_IN = "logged_in"
 
 
 class StupidError(Exception):
@@ -23,24 +31,96 @@ class UserSession:
 
     URL = config.GLPI_BASE_URL
 
-    def __init__(self, user_id, login=None, password=None):
-        data = core.db_connect.get_data(user_id)
+    def __init__(self, user_id: int) -> None:
+        self.user_id: int = user_id
+        self.state: typing.Optional[FSMContext] = None
+        self.login: typing.Optional[str] = None
+        self.password: typing.Optional[str] = None
+        self.is_logged_in: bool = False
 
-        if data is None and (login is None or password is None):
-            raise StupidError
+    async def create(self, state: FSMContext, login=None, password=None):
+        """Async replacement for __init__"""
+        self.state = state
+        data = await self.state.get_data()
+        if password is None:
+            pwd_hidden = str(None)
+        else:
+            pwd_hidden = "_" + "*" * len(password) + "_"
+        logging.info(
+            "UserSesion create. user_id: %d login: %s, password: %s, data: %s",
+            self.user_id,
+            login,
+            pwd_hidden,
+            data,
+        )
 
-        self.user_id = user_id
+        if data is None and login is None and password is None:
+            raise StupidError("Usage error -- No info to create a UserSession")
+
         if data is None:
-            self.login = login
-            self.password = password
-            self.check_cred()
-            core.db_connect.add_data(
-                user_id, {"login": self.login, "password": self.password}
-            )
-            return
+            if login is not None and password is not None:
+                self.login = login
+                self.password = password
+                self.check_cred()
+                self.state.set_data(
+                    data={LOGIN: self.login, PASSWORD: self.password, LOGGED_IN: True}
+                )
+                return
+            if login is not None:
+                self.state.set_data(data={LOGIN: login})
+                return
+            if password is not None:
+                logging.warning("Got password without login. Something is wrong")
+                self.state.set_data(data={PASSWORD: password})
+                return
 
-        self.login = data["login"]
-        self.password = data["password"]
+        if login is not None:
+            data[LOGIN] = login
+        if password is not None:
+            data[PASSWORD] = password
+
+        if LOGIN in data:
+            self.login = data[LOGIN]
+        if PASSWORD in data:
+            self.password = data[PASSWORD]
+        if (
+            (login is not None or password is not None)
+            and self.login is not None
+            and self.password is not None
+        ):
+            self.check_cred()
+            data[LOGGED_IN] = True
+        if LOGGED_IN in data and data[LOGGED_IN]:
+            self.is_logged_in = True
+        logging.info("write data: %s", data)
+        await state.set_data(data=data)
+
+    def __repr__(self) -> str:
+        return (
+            "UserSession() ="
+            + f" user_id =_{self.user_id}_"
+            + f" login =_{self.login}_"
+            + f" password =_{self.password}_"
+            + f" is_logged_in = _{self.is_logged_in}_"
+            + f" state = _{self.state}_"
+        )
+
+    async def destroy(self, state: FSMContext = None):
+        """Destroy all user data and state
+
+        Args:
+            state (FSMContext): state to destroy
+        """
+        if self.state is None and state is None:
+            raise StupidError("No state provided")
+        if self.state is not None and state is not None and self.state != state:
+            raise StupidError("Two confusing states provided")
+        if state is not None:
+            await state.reset_state()
+        elif self.state is not None:
+            await self.state.reset_state()
+        else:
+            raise StupidError(f"Program error: self.state={self.state} state={state}")
 
     def check_cred(self):
         """
@@ -51,26 +131,34 @@ class UserSession:
         ):
             pass
 
-    def add_field(self, key: str, data: Any) -> None:
+    async def add_field(self, key: str, data: str) -> None:
         """Add datafield to user_id in database
 
         Args:
             key (str): key to add
-            data (Any): value to add
+            data (str): value to add
         """
-        core.db_connect.add_field(self.user_id, key, data)
+        logging.info("add_field %s", {key: data})
+        # await self.state.
+        await self.state.update_data(data={key: data})
 
-    def pop_field(self, key: str) -> str:
+    async def pop_field(self, key: str, default: str = "") -> str:
+        # TODO fix docstring
         """Delete and return field to database record
 
         Args:
             key (int): normally user_id
-            sub_key (str): user attribute
-            value (Any): value if user_attribute
         """
-        return core.db_connect.pop_field(self.user_id, key)
+        data = await self.state.get_data()
+        if key not in data:
+            logging.warning("pop_field: there is no {key} in {data}")
+            return default
+        result = data[key]
+        del data[key]
+        await self.state.set_data(data)
+        return result
 
-    def get_all_tickets(self) -> List[Dict]:
+    def get_all_tickets(self) -> typing.List[typing.Dict]:
         """
         Return all tickets
         """

@@ -2,13 +2,15 @@
 Different keyboards
 """
 from aiogram.types import (
-    # ReplyKeyboardRemove,
+    ReplyKeyboardRemove,
     ReplyKeyboardMarkup,
     # KeyboardButton,
     # InlineKeyboardMarkup,
     # InlineKeyboardButton,
 )
 from bot.app.ticket import URGENCY
+
+no_keyboard = ReplyKeyboardRemove()
 
 select_urgent_keyboard = ReplyKeyboardMarkup(
     resize_keyboard=True, one_time_keyboard=True
