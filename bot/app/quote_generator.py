@@ -6,7 +6,7 @@ import requests
 
 
 def get_quote() -> str:
-    """Get random quote from https://forismatic.com/ru/api/
+    """Get random quote from https://forismatic.com
 
     Returns:
         str: [description]
