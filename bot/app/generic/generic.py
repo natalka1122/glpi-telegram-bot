@@ -13,6 +13,7 @@ from bot.app.bot_state import Form
 
 from bot.app.ticket import show_ticket, urgency_to_int
 from bot.usersession import UserSession
+from bot.app.quote_generator import get_quote
 
 
 async def start_message(user_id: int, state: FSMContext):
@@ -215,7 +216,7 @@ async def text_message(user_id):
     Args:
         user_id (int): telegram user id that issued command
     """
-    # TODO: Make something great when user input was not understood
+    await bot.send_message(user_id, get_quote(), reply_markup=no_keyboard)
     await bot.send_message(
         user_id,
         "К сожалению, наш робот Вас не понял. Попробуйте ещё раз или введите /help",

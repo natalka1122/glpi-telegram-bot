@@ -92,7 +92,6 @@ class UserSession:
             data[LOGGED_IN] = True
         if LOGGED_IN in data and data[LOGGED_IN]:
             self.is_logged_in = True
-        logging.info("write data: %s", data)
         await state.set_data(data=data)
 
     def __repr__(self) -> str:
