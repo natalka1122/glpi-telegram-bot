@@ -118,13 +118,12 @@ class DBHelper(BaseStorage):
         user: typing.Union[str, int, None] = None,
         whole_data: typing.Dict = None,
     ) -> None:
-        # TODO write docstring
-        """[summary]
+        """Writes all known data for specific user to database
 
         Args:
-            chat (typing.Union[str, int, None], optional): [description]. Defaults to None.
-            user (typing.Union[str, int, None], optional): [description]. Defaults to None.
-            data (typing.Dict, optional): [description]. Defaults to None.
+            chat (typing.Union[str, int, None], optional): chat_id for telegram. Defaults to None.
+            user (typing.Union[str, int, None], optional): user_id for telegram. Defaults to None.
+            whole_data (typing.Dict, optional): data to store. Defaults to None.
         """
         if whole_data is None:
             whole_data = {}
@@ -220,70 +219,3 @@ class DBHelper(BaseStorage):
     ):
         # TODO under construction
         raise NotImplementedError
-
-    # def add_data(self, user_id: int, data: Dict) -> None:
-    #     """Add data to corresponding key
-
-    #    Args:
-    #        user_id (int): telegram
-    #        value ([type]): user attributes
-    #    """
-    #    with self._database.transaction():
-    #        self._userid.set(user_id, json.dumps(data))
-    #        if "login" in data:
-    #            self._login[data["login"]] = user_id
-
-    # def add_field(self, key: int, sub_key: str, value: str) -> None:
-    #    """Add field to database record
-
-    #    Args:
-    #        key (int): normally user_id
-    #        sub_key (str): user attribute
-    #        value (Any): value if user_attribute
-    #    """
-    #    # TODO Test me
-    #    with self._database.transaction():
-    #        data = json.loads(self._database[key].decode("utf8"))
-    #        data[sub_key] = value
-    #        self._database[key] = json.dumps(data)
-
-    # def pop_field(self, key: int, sub_key: str) -> str:
-    #    """Delete and return field to database record
-
-    #    Args:
-    #        key (int): normally user_id
-    #        sub_key (str): user attribute
-    #        value (Any): value if user_attribute
-    #    """  # TODO Test me
-    #    with self._database.transaction():
-    #        data = json.loads(self._database[key].decode("utf8"))
-    #        result = data[sub_key]
-    #        del data[sub_key]
-    #        self._database[key] = json.dumps(data)
-    #        return result
-
-    # def delete_data(self, key: int) -> None:
-    #    """Delete data from corresponding key
-
-    #    Args:
-    #        key (int): normally user_id
-    #    """
-    #    with self._database.transaction():
-    #        try:
-    #            self._database.delete(key)
-    #        except KeyError:
-    #            pass
-
-    # def get_data(self, key: int):
-    #    """Returns data from corresponding key
-
-    #    Args:
-    #        key (int): normally user_id
-
-    #    Returns:
-    #        Dict: json with data
-    #    """
-    #    try:
-    #        return json.loads(self._database.get(key).decode("utf8"))
-    #    except KeyError:
-    #        return None

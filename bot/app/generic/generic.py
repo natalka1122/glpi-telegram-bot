@@ -20,6 +20,7 @@ async def start_message(user_id: int, state: FSMContext):
 
     Args:
         user_id (int): telegram user id that issued /start command
+        state (FSMContext): state for specific user
     """
     user_session = UserSession(user_id=user_id)
     await user_session.create(state=state)
@@ -28,7 +29,7 @@ async def start_message(user_id: int, state: FSMContext):
         await Form.logged_in.set()
         await bot.send_message(
             user_id,
-            "Вы уж залогинены. Если хотите разлогинится, то введите /logout",
+            "Вы уж залогинены. Если хотите разлогинится, то введите /logout. Что бы увидеть все команды, введите /help",
             reply_markup=no_keyboard,
         )
         return
@@ -36,13 +37,26 @@ async def start_message(user_id: int, state: FSMContext):
     await onboarding.onboarding_start(user_id)
 
 
-async def logout(user_id: int, state: FSMContext) -> None:
-    # TODO write docstring
-    """[summary]
+async def help_command(user_id: int) -> None:
+    """/help command handler
 
     Args:
-        user_id (int): [description]
-        state (FSMContext): [description]
+        user_id (int): telegram user id that issued /help command
+    """
+    await bot.send_message(
+        user_id,
+        "Вас приветсвует супер-бот СКИТ\n"
+        "Введите /tickets, что бы получить список заявок\n"
+        "Введите /add, что бы создать заявку",
+    )
+
+
+async def logout(user_id: int, state: FSMContext) -> None:
+    """/logout command handler
+
+    Args:
+        user_id (int): telegram user id that issued /logout command
+        state (FSMContext): state for specific user
     """
     logging.info("User ID %d is logged out", user_id)
     await state.finish()

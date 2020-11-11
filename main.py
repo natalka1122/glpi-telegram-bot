@@ -20,7 +20,6 @@ from bot.app.bot_state import Form
 import config
 
 
-# TODO add /help
 # TODO add /cancel
 
 
@@ -37,12 +36,11 @@ async def start_message(message: types.Message, state: FSMContext) -> None:
 @dp.message_handler(commands=["/help"], state="*")
 async def help_message(message: types.Message, state: FSMContext) -> None:
     """Reacts on /help command in every state"""
-    # TODO add /help command
     user_id: int = message.from_user.id
     current_state: Union[str, None] = await state.get_state()
     logging.info("User ID %d issued /help command. State: %s", user_id, current_state)
 
-    await generic.not_implemented(user_id)
+    await generic.help_command(user_id)
 
 
 @dp.message_handler(commands=["logout"], state="*")

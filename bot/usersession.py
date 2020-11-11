@@ -138,17 +138,19 @@ class UserSession:
             key (str): key to add
             data (str): value to add
         """
-        logging.info("add_field %s", {key: data})
-        # await self.state.
         await self.state.update_data(data={key: data})
 
     async def pop_field(self, key: str, default: str = "") -> str:
-        # TODO fix docstring
-        """Delete and return field to database record
+        """Delete field from data and return it's value
 
         Args:
-            key (int): normally user_id
+            key (str): normally user_id
+            default (str, optional): default value if the key does not exist. Defaults to "".
+
+        Returns:
+            str: field value
         """
+
         data = await self.state.get_data()
         if key not in data:
             logging.warning("pop_field: there is no {key} in {data}")
