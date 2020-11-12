@@ -54,21 +54,25 @@ class DBHelper(BaseStorage):
 
     async def close(self):
         logging.debug("DBHelper close")
-        self.debug()
         self._database.close()
 
     async def wait_closed(self):
         logging.debug("DBHelper wait_closed")
-        # pass
 
-    def debug(self) -> None:
-        """Prints database content"""
+    def export(self) -> typing.Dict:
+        """Exports database content
+
+        Returns:
+            typing.Dict: database content
+        """
         logging.debug("DBHelper debug")
+        result = {}
         with self._database.transaction():
-            logging.info("user_id: %s", self._userid.to_dict())
-            logging.info("login: %s", self._login.to_dict())
+            result["user_id"] = self._userid.to_dict()
+            result["login"] = self._login.to_dict()
+        return result
 
-    def resolve_address(self, chat: int, user: int) -> str:
+    def _resolve_address(self, chat: int, user: int) -> str:
         """Fills data if the user is new
 
         Args:
@@ -106,10 +110,9 @@ class DBHelper(BaseStorage):
         Returns:
             typing.Dict: [description]
         """
-        user = self.resolve_address(chat=chat, user=user)
+        user = self._resolve_address(chat=chat, user=user)
         with self._database.transaction():
             whole_data: typing.Dict = bytes_to_dict(self._userid[user])
-        logging.info("whole_data: %s", whole_data)
         return whole_data
 
     def _set_whole_data(
@@ -127,7 +130,7 @@ class DBHelper(BaseStorage):
         """
         if whole_data is None:
             whole_data = {}
-        user = self.resolve_address(chat=chat, user=user)
+        user = self._resolve_address(chat=chat, user=user)
         with self._database.transaction():
             self._userid[user] = dict_to_bytes(whole_data)
 
@@ -138,7 +141,7 @@ class DBHelper(BaseStorage):
         user: typing.Union[str, int, None] = None,
         default: typing.Optional[str] = None,
     ) -> typing.Optional[str]:
-        logging.info("DBHelper get_state")
+        logging.debug("DBHelper get_state")
         return self._get_whole_data(chat=chat, user=user).get(STATE, default)
 
     async def set_state(
@@ -148,7 +151,7 @@ class DBHelper(BaseStorage):
         user: typing.Union[str, int, None],
         state: typing.Optional[typing.AnyStr],
     ):
-        logging.info("DBHelper set_state %s", state)
+        logging.debug("DBHelper set_state %s", state)
         whole_data = self._get_whole_data(chat, user)
         whole_data[STATE] = state
         logging.info("DBHelper set_state writes %s", whole_data)
@@ -161,7 +164,7 @@ class DBHelper(BaseStorage):
         user: typing.Union[str, int, None] = None,
         default: typing.Optional[typing.Dict] = None,
     ) -> typing.Dict:
-        logging.info("DBHelper get_data")
+        logging.debug("DBHelper get_data")
         return self._get_whole_data(chat, user).get(DATA, default)
 
     async def set_data(
@@ -171,7 +174,7 @@ class DBHelper(BaseStorage):
         user: typing.Union[str, int, None] = None,
         data: typing.Dict,
     ):
-        logging.info("DBHelper set_data")
+        logging.debug("DBHelper set_data")
         whole_data = self._get_whole_data(chat, user)
         whole_data[DATA] = data
         self._set_whole_data(chat=chat, user=user, whole_data=whole_data)
@@ -184,7 +187,7 @@ class DBHelper(BaseStorage):
         data: typing.Dict,
         **kwargs,
     ):
-        logging.info("DBHelper update_data")
+        logging.debug("DBHelper update_data")
         whole_data = self._get_whole_data(chat, user)
         whole_data["data"].update(data, **kwargs)
         self._set_whole_data(chat=chat, user=user, whole_data=whole_data)
