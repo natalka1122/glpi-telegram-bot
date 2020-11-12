@@ -1,4 +1,4 @@
-FROM alpine
+FROM alpine:3.12.1
 
 RUN apk add --no-cache build-base  python3 python3-dev && \
     if [ ! -e /usr/bin/python ]; then ln -sf python3 /usr/bin/python ; fi && \
