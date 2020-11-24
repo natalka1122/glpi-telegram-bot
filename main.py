@@ -3,13 +3,12 @@ Main exec file for telegram bot.
 """
 
 import logging
-import threading
-from typing import Union
+import asyncio
+import typing
 
 from aiogram import types
-from aiogram.dispatcher import FSMContext
+from aiogram.dispatcher import FSMContext, dispatcher
 
-# from aiogram.dispatcher.filters import state
 from aiogram.utils import executor
 from aiogram.utils.exceptions import NetworkError
 
@@ -17,7 +16,8 @@ from bot.app import checker
 from bot.app.core import dp
 from bot.app.generic import generic, onboarding
 from bot.app.bot_state import Form
-import config
+
+# import config
 
 
 # TODO add /cancel
@@ -27,7 +27,7 @@ import config
 async def start_message(message: types.Message, state: FSMContext) -> None:
     """Reacts on /start command in every state"""
     user_id: int = message.from_user.id
-    current_state: Union[str, None] = await state.get_state()
+    current_state: typing.Union[str, None] = await state.get_state()
     logging.info("User ID %d issued /start command. State: %s", user_id, current_state)
 
     await generic.start_message(user_id, state)
@@ -37,7 +37,7 @@ async def start_message(message: types.Message, state: FSMContext) -> None:
 async def help_message(message: types.Message, state: FSMContext) -> None:
     """Reacts on /help command in every state"""
     user_id: int = message.from_user.id
-    current_state: Union[str, None] = await state.get_state()
+    current_state: typing.Union[str, None] = await state.get_state()
     logging.info("User ID %d issued /help command. State: %s", user_id, current_state)
 
     await generic.help_command(user_id)
@@ -47,7 +47,7 @@ async def help_message(message: types.Message, state: FSMContext) -> None:
 async def logout_message(message: types.Message, state: FSMContext) -> None:
     """Reacts on /logout command in every state"""
     user_id: int = message.from_user.id
-    current_state: Union[str, None] = await state.get_state()
+    current_state: typing.Optional[str] = await state.get_state()
     logging.info("User ID %d issued /logout command. State: %s", user_id, current_state)
 
     await generic.logout(user_id=user_id, state=state)
@@ -62,7 +62,7 @@ async def process_to_enter_login(message: types.Message, state: FSMContext) -> N
     """Reacts on every text entered with the state Form.to_enter_login"""
     user_id: int = message.from_user.id
     text: str = message.text
-    current_state: Union[str, None] = await state.get_state()
+    current_state: typing.Optional[str] = await state.get_state()
     logging.info(
         "User ID %d provided login: '%s'. State: %s", user_id, text, current_state
     )
@@ -84,7 +84,7 @@ async def to_enter_password(message: types.Message, state: FSMContext) -> None:
     user_id: int = message.from_user.id
     password: str = message.text
 
-    current_state: Union[str, None] = await state.get_state()
+    current_state: typing.Optional[str] = await state.get_state()
     logging.info(
         "User ID %d provided password: ***. Status: %s", user_id, current_state
     )
@@ -108,7 +108,7 @@ async def to_enter_password(message: types.Message, state: FSMContext) -> None:
 async def list_all_tickets(message: types.Message, state: FSMContext) -> None:
     """Reacts on /tickets command in every state"""
     user_id: int = message.from_user.id
-    current_state: Union[str, None] = await state.get_state()
+    current_state: typing.Optional[str] = await state.get_state()
     logging.info(
         "User ID %d issued /tickets command. State: %s", user_id, current_state
     )
@@ -120,7 +120,7 @@ async def list_all_tickets(message: types.Message, state: FSMContext) -> None:
 async def add_ticket(message: types.Message, state: FSMContext) -> None:
     """Reacts on /add command for logged user"""
     user_id: int = message.from_user.id
-    current_state: Union[str, None] = await state.get_state()
+    current_state: typing.Optional[str] = await state.get_state()
     logging.info("User ID %d issued /add command. State: %s", user_id, current_state)
 
     await generic.add_new_ticket(user_id=user_id)
@@ -171,7 +171,7 @@ async def text_message(message: types.Message, state: FSMContext) -> None:
     user_id: int = message.from_user.id
     text: str = message.text
 
-    current_state: Union[str, None] = await state.get_state()
+    current_state: typing.Optional[str] = await state.get_state()
     logging.info(
         "User ID %d provided unhandled text input: %s. Status: %s",
         user_id,
@@ -187,7 +187,7 @@ async def non_text_message(message: types.Message, state: FSMContext) -> None:
     """Process any unhandled non-text messages"""
     user_id: int = message.from_user.id
 
-    current_state: Union[str, None] = await state.get_state()
+    current_state: typing.Union[str] = await state.get_state()
     logging.info(
         "User ID %d provided unhandled non-text input. Status: %s",
         user_id,
@@ -197,19 +197,19 @@ async def non_text_message(message: types.Message, state: FSMContext) -> None:
     await generic.text_message(user_id)
 
 
+async def on_startup(disp: dispatcher.Dispatcher):
+    """ Create scheduler to regularly check tickets """
+    asyncio.create_task(checker.scheduler(dbhelper=disp.storage))
+
+
 if __name__ == "__main__":
-    th = threading.Thread(target=checker.my_thread_func)
-    th.start()
     logging.info("GLPI Telegram bot is started")
     while True:
         try:
-            executor.start_polling(dp, skip_updates=True)
+            executor.start_polling(dp, skip_updates=True, on_startup=on_startup)
         except NetworkError:
             logging.error("Network Error. Restarting...")
             continue
         else:
             break
-
     logging.info("GLPI Telegram bot is closed")
-    config.WE_ARE_CLOSING = True
-    th.join()

@@ -51,6 +51,7 @@ class DBHelper(BaseStorage):
         self._database: vedis = vedis.Vedis(self._filename)
         self._userid: vedis.Hash = self._database.Hash("user_id")
         self._login: vedis.Hash = self._database.Hash("login")
+        self._tickets: vedis.Hash = self._database.Hash("tickets")
 
     async def close(self):
         logging.debug("DBHelper close")
@@ -70,7 +71,11 @@ class DBHelper(BaseStorage):
         with self._database.transaction():
             result["user_id"] = self._userid.to_dict()
             result["login"] = self._login.to_dict()
+            result["ticket"] = self._tickets.to_dict()
         return result
+    
+    # def get_tickets(self):
+    #     with self._database.transaction():
 
     def _resolve_address(self, chat: int, user: int) -> str:
         """Fills data if the user is new
