@@ -73,9 +73,27 @@ class DBHelper(BaseStorage):
             result["login"] = self._login.to_dict()
             result["ticket"] = self._tickets.to_dict()
         return result
-    
-    # def get_tickets(self):
-    #     with self._database.transaction():
+
+    def all_tickets_generator(self):
+        with self._database.transaction():
+            if self._tickets:
+                for ticket in self._tickets:
+                    yield bytes_to_dict(self._tickets[ticket])
+
+    def update_tickets(self, add_ticket_dict:typing.Dict = None, delete_ticket_id:typing.List[int] = None):
+        if add_ticket_dict is None:
+            add_ticket_dict = dict()
+        if delete_ticket_id is None:
+            delete_ticket_id = []
+        if len(add_ticket_dict) == 0 and len(delete_ticket_id)==0:
+            return
+        
+        logging.info("update_tickets: add_ticket_dict = %s %s delete_ticket_id = %s",len(add_ticket_dict),add_ticket_dict,delete_ticket_id)
+        with self._database.transaction():
+            for ticket_id in add_ticket_dict:
+                self._tickets[ticket_id] = dict_to_bytes(add_ticket_dict[ticket_id])
+            for ticket_id in delete_ticket_id:
+                del self._tickets[ticket_id]
 
     def _resolve_address(self, chat: int, user: int) -> str:
         """Fills data if the user is new
