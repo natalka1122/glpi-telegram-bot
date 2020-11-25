@@ -132,7 +132,7 @@ class UserSession:
             result = glpi.get_my_profiles()
         logging.info("get_my_profiles = %s",result)
         return result[0][USER_ID]
-            
+
 
     async def add_field(self, key: str, data: str) -> None:
         """Add datafield to user_id in database
