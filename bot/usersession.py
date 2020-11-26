@@ -91,7 +91,7 @@ class UserSession:
         ):
             data[USER_ID] = self.check_cred()
             data[LOGGED_IN] = True
-        if LOGGED_IN in data and data[LOGGED_IN]:
+        if data.get(LOGGED_IN, False):
             self.is_logged_in = True
         await state.set_data(data=data)
 
