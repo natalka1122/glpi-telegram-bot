@@ -13,6 +13,7 @@ PASSWORD = "password"
 LOGGED_IN = "logged_in"
 USER_ID = "id"
 
+
 class StupidError(Exception):
     """Exception raised by this module."""
 
@@ -39,12 +40,17 @@ class UserSession:
         self.password: typing.Optional[str] = None
         self.is_logged_in: bool = False
 
-    async def create(self, state: FSMContext, login=None, password=None):
+    async def create(
+        self,
+        state: FSMContext,
+        login: typing.Optional[str] = None,
+        password: typing.Optional[str] = None,
+    ):
         """Async replacement for __init__"""
         self.state = state
-        data = await self.state.get_data()
+        data: typing.Dict = await self.state.get_data()
         if password is None:
-            pwd_hidden = str(None)
+            pwd_hidden: str = str(None)
         else:
             pwd_hidden = "_" + "*" * len(password) + "_"
         logging.info(
@@ -127,12 +133,13 @@ class UserSession:
         Raise error if no login with provided credentials
         """
         with glpi_api.connect(
-            url=self.URL, auth=(self.login, self.password), apptoken=config.GLPI_APP_API_KEY
+            url=self.URL,
+            auth=(self.login, self.password),
+            apptoken=config.GLPI_APP_API_KEY,
         ) as glpi:
             result = glpi.get_my_profiles()
-        logging.info("get_my_profiles = %s",result)
+        logging.info("get_my_profiles = %s", result)
         return result[0][USER_ID]
-
 
     async def add_field(self, key: str, data: str) -> None:
         """Add datafield to user_id in database
@@ -168,7 +175,9 @@ class UserSession:
         Return all tickets
         """
         with glpi_api.connect(
-            url=self.URL, auth=(self.login, self.password), apptoken=config.GLPI_APP_API_KEY
+            url=self.URL,
+            auth=(self.login, self.password),
+            apptoken=config.GLPI_APP_API_KEY,
         ) as glpi:
             return glpi.get_all_items("ticket")
 
@@ -177,7 +186,9 @@ class UserSession:
         Create one ticket with specified title
         """
         with glpi_api.connect(
-            url=self.URL, auth=(self.login, self.password), apptoken=config.GLPI_APP_API_KEY
+            url=self.URL,
+            auth=(self.login, self.password),
+            apptoken=config.GLPI_APP_API_KEY,
         ) as glpi:
             result = glpi.add(
                 "ticket",
@@ -194,6 +205,8 @@ class UserSession:
         Return one ticket with ticket_id
         """
         with glpi_api.connect(
-            url=self.URL, auth=(self.login, self.password), apptoken=config.GLPI_APP_API_KEY
+            url=self.URL,
+            auth=(self.login, self.password),
+            apptoken=config.GLPI_APP_API_KEY,
         ) as glpi:
             return glpi.get_item("ticket", ticket_id)
