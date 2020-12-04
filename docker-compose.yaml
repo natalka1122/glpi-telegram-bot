@@ -2,10 +2,19 @@
 version: "3"
 services:
   rtkskit:
-    build: .
+    build:
+      context: .
+    env_file: .env
     restart: unless-stopped
     environment:
-      - TELEGRAM_TOKEN:${TELEGRAM_TOKEN}
-      - GLPI_BASE_URL:${GLPI_BASE_URL}
-#    volumes:
-#        - /TO_REPLACE:/data
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - GLPI_BASE_URL=${GLPI_BASE_URL}
+      # Uncomment bellow to provide non-default values
+      # - GLPI_APP_API_KEY=${GLPI_APP_API_KEY}
+      # - CHECK_PERIOD=${CHECK_PERIOD}
+      # - DATA_DIR=${DATA_DIR}
+      # - LOG_LEVEL=${LOG_LEVEL}
+
+    # Uncomment bellow to save state:
+    # volumes:
+    #   - ./telegram-bot:${DATA_DIR}
