@@ -30,13 +30,7 @@ GLPI_APP_API_KEY: str = os.getenv("GLPI_APP_API_KEY", "")
 
 CHECK_PERIOD = int(os.getenv("CHECK_PERIOD", "300"))
 
-# GLPI_USE_ADMIN: bool = bool(os.getenv("GLPI_USE_ADMIN", str(False)).lower() != "false")
-# if GLPI_USE_ADMIN:
-#     GLPI_ADMIN_LOGIN: str = os.getenv("GLPI_ADMIN_LOGIN", "")
-#     GLPI_ADMIN_PASSWORD: str = os.getenv("GLPI_ADMIN_PASSWORD", "")
-#     GLPI_ADMIN_API_KEY: str = os.getenv("GLPI_ADMIN_API_KEY", "")
-
-_data_dir: str = os.getenv("DATA_DIR", default="/data/")
+_data_dir: str = os.getenv("DATA_DIR", default="data/")
 os.makedirs(_data_dir, exist_ok=True)
 DB_FILE: str = _data_dir + "db.db"
 LOG_FILENAME: str = _data_dir + "log.txt"
