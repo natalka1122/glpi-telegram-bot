@@ -50,7 +50,7 @@ class DBHelper(BaseStorage):
         self._filename: str = filename
         self._database: vedis = vedis.Vedis(self._filename)
         self._userid: vedis.Hash = self._database.Hash("user_id")
-        self._login: vedis.Hash = self._database.Hash("login")
+        self._glpi_id: vedis.Hash = self._database.Hash("glpi")
         self._tickets: vedis.Hash = self._database.Hash("tickets")
 
     async def close(self):
@@ -70,7 +70,7 @@ class DBHelper(BaseStorage):
         result = {}
         with self._database.transaction():
             result["user_id"] = self._userid.to_dict()
-            result["login"] = self._login.to_dict()
+            result["glpi_id"] = self._glpi_id.to_dict()
             result["ticket"] = self._tickets.to_dict()
         return result
 
@@ -80,6 +80,12 @@ class DBHelper(BaseStorage):
             if self._tickets:
                 for ticket in self._tickets:
                     yield bytes_to_dict(self._tickets[ticket])
+
+    def all_user_generator(self):
+        """ Return all user_id in generator """
+        with self._database.transaction():
+            for userid in self._userid:
+                yield bytes_to_dict(userid)
 
     def update_tickets(
         self,
@@ -225,6 +231,26 @@ class DBHelper(BaseStorage):
         whole_data = self._get_whole_data(chat, user)
         whole_data["data"].update(data, **kwargs)
         self._set_whole_data(chat=chat, user=user, whole_data=whole_data)
+
+    # def add_glpi_id(self, user: typing.Union[str, int, None], glpi_id: int):
+    #     with self._database.transaction():
+    #         if glpi_id in self._glpi_id:
+    #             data = bytes_to_dict(self._glpi_id[glpi_id])
+    #         else:
+    #             data = []
+    #         self._glpi_id[glpi_id] = dict_to_bytes(data + [int(user)])
+
+    # def delete_glpi_id(self, user: typing.Union[str, int, None], glpi_id: int):
+    #     with self._database.transaction():
+    #         if glpi_id in self._glpi_id:
+    #             data = bytes_to_dict(self._glpi_id[glpi_id])
+    #         else:
+    #             return
+    #         try:
+    #             data.remove(int(user))
+    #         except ValueError:
+    #             return
+    #         self._glpi_id[glpi_id] = dict_to_bytes(data)
 
     async def get_bucket(
         self,

@@ -11,7 +11,7 @@ import bot.glpi_api as glpi_api
 LOGIN = "login"
 PASSWORD = "password"
 LOGGED_IN = "logged_in"
-USER_ID = "id"
+GLPI_ID = "glpi_id"
 
 
 class StupidError(Exception):
@@ -68,9 +68,9 @@ class UserSession:
             if login is not None and password is not None:
                 self.login = login
                 self.password = password
-                self.check_cred()
+                glpi_id = self.check_cred()
                 self.state.set_data(
-                    data={LOGIN: self.login, PASSWORD: self.password, LOGGED_IN: True}
+                    data={LOGIN: self.login, PASSWORD: self.password, GLPI_ID: glpi_id, LOGGED_IN: True}
                 )
                 return
             if login is not None:
@@ -95,7 +95,7 @@ class UserSession:
             and self.login is not None
             and self.password is not None
         ):
-            data[USER_ID] = self.check_cred()
+            data[GLPI_ID] = self.check_cred()
             data[LOGGED_IN] = True
         if data.get(LOGGED_IN, False):
             self.is_logged_in = True
@@ -139,7 +139,7 @@ class UserSession:
         ) as glpi:
             result = glpi.get_my_profiles()
         logging.info("get_my_profiles = %s", result)
-        return result[0][USER_ID]
+        return result[0]["id"]
 
     async def add_field(self, key: str, data: str) -> None:
         """Add datafield to user_id in database
@@ -185,15 +185,18 @@ class UserSession:
         """
         Create one ticket with specified title
         """
-        with glpi_api.connect(
-            url=self.URL,
-            auth=(self.login, self.password),
-            apptoken=config.GLPI_APP_API_KEY,
-        ) as glpi:
-            result = glpi.add(
-                "ticket",
-                {"name": title, "content": description, "urgency": urgency},
-            )
+        try:
+            with glpi_api.connect(
+                url=self.URL,
+                auth=(self.login, self.password),
+                apptoken=config.GLPI_APP_API_KEY,
+            ) as glpi:
+                result = glpi.add(
+                    "ticket",
+                    {"name": title, "content": description, "urgency": urgency},
+                )
+        except glpi_api.GLPIError as err:
+            raise StupidError("Failed to add ticket: {}".format(err)) from err
         # [{'id': 1309, 'message': 'Объект успешно добавлен: dds'}]
         if isinstance(result, list) and len(result) == 1 and "id" in result[0]:
             return result[0]["id"]

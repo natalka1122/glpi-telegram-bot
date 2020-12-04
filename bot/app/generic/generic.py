@@ -12,7 +12,7 @@ from bot.app.keyboard import no_keyboard, select_urgent_keyboard
 from bot.app.bot_state import Form
 
 from bot.app.ticket import show_ticket, urgency_to_int
-from bot.usersession import UserSession
+from bot.usersession import StupidError, UserSession
 from bot.app.quote_generator import get_quote
 
 
@@ -186,15 +186,14 @@ async def process_to_select_priority(
         )
         return
 
-    ticket_id = user_session.create_ticket(
-        title=title, description=description, urgency=priority_int
-    )
+    try:
+        ticket_id = user_session.create_ticket(title=title, description=description, urgency=priority_int)
+    except StupidError as err:
+        message:str = f'Произошла неизвестная науке ошибка {err}'
+    else:
+        message:str = f'Заявка "{title}" принята. Номер заявки - {ticket_id}'
+    await bot.send_message(user_id,message,reply_markup=no_keyboard)
     await Form.logged_in.set()
-    await bot.send_message(
-        user_id,
-        f'Заявка "{title}" принята. Номер заявки - {ticket_id}',
-        reply_markup=no_keyboard,
-    )
 
 
 async def not_implemented(user_id: int) -> None:
