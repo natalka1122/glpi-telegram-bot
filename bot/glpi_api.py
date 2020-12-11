@@ -2,11 +2,10 @@
 provided by the API and manage HTTP return codes.
 """
 
-from __future__ import unicode_literals
-
 import os
 import re
 import sys
+import logging
 import warnings
 from base64 import b64encode
 from contextlib import contextmanager
@@ -36,8 +35,35 @@ _WARN_DEL_ERR = (
 _FILENAME_RE = re.compile('^filename="(.+)";')
 
 
+# class GLPIErrorLogin(Exception):
+#     pass
+
+
+# class GLPIErrorForbidden(Exception):
+#     pass
+
+
+# class GLPIErrorNoServer(Exception):
+#     pass
+
+
+# class GLPIErrorUnknown(Exception):
+#     pass
+
+
 class GLPIError(Exception):
     """Exception raised by this module."""
+
+    # TODO Add error handling
+
+    # def __new__(cls, msg: str) -> Exception:
+    #     if "ERROR_GLPI_LOGIN" in msg:
+    #         return GLPIErrorLogin(msg)
+    #     if "ERROR_NOT_ALLOWED_IP" in msg:
+    #         return GLPIErrorForbidden(msg)
+    #     if "ERROR_APP_TOKEN_PARAMETERS_MISSING" in msg:
+    #         return GLPIErrorForbidden(msg)
+    #     return GLPIErrorUnknown(msg)
 
 
 @contextmanager
@@ -680,6 +706,11 @@ class GLPI:
                          {'name': 'computer2', 'serial': '234567', 'entities_id': 1})
             [{'id': 5, 'message': ''}, {'id': 6, 'message': ''}]
         """
+        logging.debug(
+            "glpi_api.add(): POST %s json = 'input': %s",
+            self._set_method(itemtype),
+            items,
+        )
         response = self.session.post(self._set_method(itemtype), json={"input": items})
         return {
             201: lambda r: r.json(),

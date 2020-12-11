@@ -14,6 +14,7 @@ from bot.app.bot_state import Form
 from bot.app.ticket import show_ticket, urgency_to_int
 from bot.usersession import StupidError, UserSession
 from bot.app.quote_generator import get_quote
+import bot.glpi_api as glpi_api
 
 
 async def start_message(user_id: int, state: FSMContext):
@@ -76,7 +77,12 @@ async def list_all_tickets(user_id: int, state: FSMContext):
     """
     user_session = UserSession(user_id=user_id)
     await user_session.create(state=state)
-    list_tickets: typing.List[typing.Dict] = user_session.get_all_tickets()
+    try:
+        list_tickets: typing.List[typing.Dict] = user_session.get_all_tickets()
+    except glpi_api.GLPIError as err:
+        logging.info("Ошибка %s", err)
+        # TODO Catch error properly
+        return
 
     if len(list_tickets) == 0:
         logging.info(
@@ -86,9 +92,12 @@ async def list_all_tickets(user_id: int, state: FSMContext):
         return
 
     for current_ticket in list_tickets:
-        await show_ticket(
-            current_ticket, bot.send_message, user_id, reply_markup=no_keyboard
+        await bot.send_message(
+            chat_id=user_id, text=show_ticket(current_ticket), reply_markup=no_keyboard
         )
+        # await show_ticket(
+        #     current_ticket, bot.send_message, user_id, reply_markup=no_keyboard
+        # )
 
 
 async def add_new_ticket(user_id: int) -> None:
@@ -187,12 +196,15 @@ async def process_to_select_priority(
         return
 
     try:
-        ticket_id = user_session.create_ticket(title=title, description=description, urgency=priority_int)
+        ticket_id = user_session.create_ticket(
+            title=title, description=description, urgency=priority_int
+        )
     except StupidError as err:
-        message:str = f'Произошла неизвестная науке ошибка {err}'
+        message: str = f"Произошла неизвестная науке ошибка {err}"
     else:
-        message:str = f'Заявка "{title}" принята. Номер заявки - {ticket_id}'
-    await bot.send_message(user_id,message,reply_markup=no_keyboard)
+        message = f'Заявка "{title}" принята. Номер заявки - {ticket_id}'
+    logging.info(message)
+    await bot.send_message(user_id, message[:2000], reply_markup=no_keyboard)
     await Form.logged_in.set()
 
 

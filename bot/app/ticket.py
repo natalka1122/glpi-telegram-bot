@@ -1,12 +1,19 @@
 """General ticket manipulations
 """
-from typing import Dict, List, Callable
-from html2text import html2text
+import typing
+import html2text
 import html2markdown
 
 MAX_MESSAGE_LENGTH = 2000
 UNKNOWN = "Мама, это какое-то неизвестное науке число"
-STATUS = {1: "Новый", 2: "В работе"}
+STATUS = {
+    1: "Новый",
+    2: "В работе (назначена)",
+    3: "В работе (запланирована)",
+    4: "Ожидает ответа заявителя",
+    5: "Решена",
+    6: "Закрыто",
+}
 URGENCY = {
     1: "Очень низкий",
     2: "Низкий",
@@ -62,49 +69,15 @@ def urgency_to_int(urgency: str) -> int:
     raise KeyError
 
 
-async def show_ticket(
-    ticket: Dict,
-    send_message: Callable,
-    user_id,
-    max_len: int = MAX_MESSAGE_LENGTH,
-    **kwargs
-) -> None:
-    """Show ticket in chunks when needed"""
-    content = html2markdown.convert(html2text(str(ticket["content"])))
-    result: List = []
+def show_ticket(
+    ticket: typing.Dict,
+) -> str:
+    """ Show ticket for user """
+    content = html2markdown.convert(html2text.html2text(str(ticket["content"])))
+    result: typing.List = []
     result.append("Заявка с номером {} '{}'".format(ticket["id"], ticket["name"]))
     result.append("Статус: {}".format(int_to_status(ticket["status"])))
     result.append("Срочность: {}".format(int_to_urgency(ticket["urgency"])))
     result.append("Дата открытия: {}".format(ticket["date"]))
     result.append("Содержание: {}".format(content))
-
-    buffer = ""
-    for line in result:
-        line = str.strip(line)
-        if len(buffer + line) <= max_len:
-            if len(buffer) == 0:
-                buffer = line
-            else:
-                buffer += "\n" + line
-            continue
-
-        # len(buffer) + line > max_len
-        if len(buffer) > 0:
-            await send_message(user_id, buffer)
-        if len(line) < max_len:
-            buffer = line
-            continue
-
-        # len(line) > max_len
-        buffer = ""
-        while len(line) > max_len:
-            chunk = str.strip(line[:max_len])
-            if len(chunk) > 0:
-                await send_message(user_id, chunk, **kwargs)
-            line = str.strip(line[max_len:])
-
-        if len(line) > 0:
-            await send_message(user_id, line, **kwargs)
-
-    if len(buffer) > 0:
-        await send_message(user_id, buffer, **kwargs)
+    return "\n".join(result)

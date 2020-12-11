@@ -199,8 +199,7 @@ async def non_text_message(message: types.Message, state: FSMContext) -> None:
 
 async def on_startup(disp: dispatcher.Dispatcher):
     """ Create scheduler to regularly check tickets """
-    # TODO trurn this on
-    # asyncio.create_task(checker.scheduler(dbhelper=disp.storage))
+    asyncio.create_task(checker.scheduler(dbhelper=disp.storage))
 
 
 if __name__ == "__main__":

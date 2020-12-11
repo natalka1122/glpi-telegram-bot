@@ -20,6 +20,8 @@ def bytes_to_dict(source: bytes) -> typing.Dict:
     Returns:
         typing.Dict: Resulting dict
     """
+    # logging.info("source = %s", source)
+    # logging.info("result = %s", json.loads(source.decode("utf8")))
     return json.loads(source.decode("utf8"))
 
 
@@ -32,6 +34,8 @@ def dict_to_bytes(source: typing.Dict) -> bytes:
     Returns:
         bytes: Resulting string in bytes
     """
+    # logging.info("source = %s", source)
+    # logging.info("result = %s", json.dumps(source).encode("utf8"))
     return json.dumps(source).encode("utf8")
 
 
@@ -52,6 +56,9 @@ class DBHelper(BaseStorage):
         self._userid: vedis.Hash = self._database.Hash("user_id")
         self._glpi_id: vedis.Hash = self._database.Hash("glpi")
         self._tickets: vedis.Hash = self._database.Hash("tickets")
+        # export = self.export()
+        # for key in export:
+        #     logging.info("key = %s data = %s", key, export[key])
 
     async def close(self):
         logging.debug("DBHelper close")
@@ -74,45 +81,59 @@ class DBHelper(BaseStorage):
             result["ticket"] = self._tickets.to_dict()
         return result
 
-    def all_tickets_generator(self):
-        """ Return all tickets in generator """
+    def all_tickets_glpi(self, glpi_id: int):
+        """ Return all tickets for glpi user """
         with self._database.transaction():
             if self._tickets:
-                for ticket in self._tickets:
-                    yield bytes_to_dict(self._tickets[ticket])
+                if glpi_id in self._tickets:
+                    return bytes_to_dict(self._tickets[glpi_id])
+        return []
 
-    def all_user_generator(self):
-        """ Return all user_id in generator """
+    def all_user(self):
+        """ Return all user_id """
+        logging.info("dbhelper.all_user")
         with self._database.transaction():
-            for userid in self._userid:
-                yield bytes_to_dict(userid)
+            logging.info(
+                "self._userid = %s, self._userid.keys() = %s",
+                self._userid,
+                self._userid.keys(),
+            )
+            if self._userid.keys() is None:
+                return []
+            return map(bytes_to_dict, self._userid.keys())
 
-    def update_tickets(
-        self,
-        add_ticket_dict: typing.Dict = None,
-        delete_ticket_id: typing.List[int] = None,
-    ):
-        """ Add changed tickets, delete deleted tickets """
-        if add_ticket_dict is None:
-            add_ticket_dict = dict()
-        if delete_ticket_id is None:
-            delete_ticket_id = []
-        if len(add_ticket_dict) == 0 and len(delete_ticket_id) == 0:
-            return
-
-        logging.info(
-            "update_tickets: add_ticket_dict = %s %s delete_ticket_id = %s",
-            len(add_ticket_dict),
-            add_ticket_dict,
-            delete_ticket_id,
-        )
+    def write_tickets_glpi(self, glpi_id: int, data):
+        """ Write tickets corresponding to specific glpi_id user """
         with self._database.transaction():
-            for ticket_id in add_ticket_dict:
-                self._tickets[ticket_id] = dict_to_bytes(add_ticket_dict[ticket_id])
-            for ticket_id in delete_ticket_id:
-                del self._tickets[ticket_id]
+            self._tickets[glpi_id] = dict_to_bytes(data)
 
-    def _resolve_address(self, chat: int, user: int) -> str:
+    # def update_tickets(
+    #     self,
+    #     replace_ticket_dict: typing.Dict = None,
+    #     delete_ticket_id: typing.List[int] = None,
+    # ):
+    #     """ Add changed tickets, delete deleted tickets """
+    #     if replace_ticket_dict is None:
+    #         replace_ticket_dict = dict()
+    #     if delete_ticket_id is None:
+    #         delete_ticket_id = []
+    #     if len(replace_ticket_dict) == 0 and len(delete_ticket_id) == 0:
+    #         return
+
+    #     logging.info(
+    #         "update_tickets: replace_ticket_dict = %s %s delete_ticket_id = %s",
+    #         len(replace_ticket_dict),
+    #         replace_ticket_dict,
+    #         delete_ticket_id,
+    #     )
+    #     with self._database.transaction():
+    #         for ticket_id in replace_ticket_dict:
+    #             self._tickets[ticket_id] = dict_to_bytes(replace_ticket_dict[ticket_id])
+    #         for ticket_id in delete_ticket_id:
+    #             del self._tickets[ticket_id]
+    def _resolve_address(
+        self, chat: typing.Union[str, int, None], user: typing.Union[str, int, None]
+    ) -> str:
         """Fills data if the user is new
 
         Args:
