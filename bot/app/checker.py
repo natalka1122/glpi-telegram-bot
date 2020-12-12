@@ -9,7 +9,7 @@ from bot.app.core import bot
 from bot.db.dbhelper import DBHelper
 from bot.usersession import UserSession, StupidError
 
-STATUS ="status"
+STATUS = "status"
 
 
 def check_diff(
@@ -39,21 +39,66 @@ def check_diff(
             for elem in old_ticket_dict[ticket_id]:
                 # logging.info(f"old_ticket_dict[ticket_id] = {old_ticket_dict[ticket_id]}")
                 # logging.info(f"type = {type(old_ticket_dict[ticket_id])} elem = {type(elem)} {elem}")
-                if old_ticket_dict[ticket_id].get(elem,None) != new_ticket_dict[ticket_id].get(elem,None):
+                if old_ticket_dict[ticket_id].get(elem, None) != new_ticket_dict[
+                    ticket_id
+                ].get(elem, None):
                     have_changes = True
-            old_status = old_ticket_dict[ticket_id].get(STATUS,None)
-            new_status = new_ticket_dict[ticket_id].get(STATUS,None)
+            old_status = old_ticket_dict[ticket_id].get(STATUS, None)
+            new_status = new_ticket_dict[ticket_id].get(STATUS, None)
             if old_status != new_status:
-                messages[ticket_id] = f"Status: old = {old_status} new = {new_status}"
+                name: str = ""
+                if "name" in new_ticket_dict[ticket_id]:
+                    name = f"\"{new_ticket_dict[ticket_id]['name']}\""
+                date_mod: str = f"{new_ticket_dict[ticket_id].get('date_mod',None)}"
+                # messages[ticket_id] = f"Status: old = {old_status} new = {new_status}"
+                if new_status == 1:  # Новый
+                    pass  # Do nothing
+                elif new_status == 2:  # В работе (назначена)
+                    messages[ticket_id] = (
+                        f"Ваша заявка с номером {ticket_id} {name} назначена."
+                        + f" Дата и время назначения: {date_mod}"
+                    )
+                elif new_status == 3:  # В работе (запланирована)
+                    messages[ticket_id] = (
+                        f"Ваша заявка с номером {ticket_id} {name} запланирована."
+                        + f" Дата и время изменения: {date_mod}"
+                    )
+                elif new_status == 4:  # Ожидает ответа от заявителя
+                    messages[ticket_id] = (
+                        f"Ваша заявка с номером {ticket_id} {name} ожидает ответа от заявителя."
+                        + f" Дата и время изменения: {date_mod}"
+                    )
+                elif new_status == 5:  # Решена
+                    solution: str = new_ticket_dict[ticket_id]
+                    messages[ticket_id] = (
+                        f"По Вашей заявке с номером {ticket_id} {name} предложено решение: {solution}."
+                        + f" Дата и время изменения: {date_mod}"
+                        + " TODO add buttons"
+                    )
+                    # TODO Add buttons
+                elif new_status == 6:  # Закрыто
+                    messages[ticket_id] = "TODO add button"
+                    # TODO Add button
+                else:
+                    messages[
+                        ticket_id
+                    ] = f"Status: old = {old_status} new = {new_status}"
+                    logging.error(
+                        "UNKNOWN STATUS: old = %s new = %s", old_status, new_status
+                    )
+                    logging.error("old_ticket = %s", old_ticket_dict[ticket_id])
+                    logging.error("new_ticket = %s", new_ticket_dict[ticket_id])
         elif ticket_id in old_ticket_dict and ticket_id not in new_ticket_dict:
-            logging.info("Deleted (?) ticket: %s", new_ticket_dict[ticket_id])
+            logging.info("Deleted ticket: %s", old_ticket_dict[ticket_id])
             # TODO Think about it
-            messages[ticket_id] = "DELETE (?)"
+            messages[
+                ticket_id
+            ] = f"Ваша заявка с номером {ticket_id} \"{old_ticket_dict[ticket_id].get('name',None)}\" удалена."
             have_changes = True
         elif ticket_id not in old_ticket_dict and ticket_id in new_ticket_dict:
-            logging.info("I've got %s", new_ticket_dict[ticket_id])
+            logging.info("New ticket %s", new_ticket_dict[ticket_id])
             # TODO Think about it
-            messages[ticket_id] = "NEW"
+            # messages[ticket_id] = "NEW"
             have_changes = True
         elif ticket_id not in old_ticket_dict and ticket_id in new_ticket_dict:
             logging.error(
@@ -116,9 +161,7 @@ async def run_check(dbhelper: DBHelper):
                 ticket_id,
                 messages[ticket_id],
             )
-            await bot.send_message(
-                user_id, f"ticket_id = {ticket_id} message = {messages[ticket_id]}"
-            )
+            await bot.send_message(user_id, f"{messages[ticket_id]}")
 
 
 async def scheduler(dbhelper: DBHelper):
