@@ -1,5 +1,4 @@
 """Module for UserSession class"""
-from bot.app import ticket
 import logging
 import typing
 import html2text
