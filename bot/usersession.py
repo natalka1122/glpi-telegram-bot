@@ -282,7 +282,7 @@ class UserSession:
         ) as glpi:
             return glpi.get_item(TICKET, item_id=ticket_id, get_hateoas=False)
 
-    def get_last_solution(self, ticket_id: int):
+    def get_last_solution(self, ticket_id: int) -> str:
         """
         Return last proposed solution for ticket with ticket_id
         """
@@ -295,6 +295,8 @@ class UserSession:
                 TICKET, ticket_id, SOLUTION, get_hateoas=False
             )
             logging.info("solution = %s", solution)
+            if len(solution) < 1:
+                return ""
             return html2markdown.convert(
                 html2text.html2text(str(solution[-1].get("content")))
             )
