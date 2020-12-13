@@ -13,18 +13,21 @@ STATUS = "status"
 
 
 def check_diff(
-    old_tickets_list: typing.List[typing.Dict],
-    new_tickets_list: typing.List[typing.Dict],
+    old_ticket_dict: typing.Dict[int, typing.Dict],
+    new_ticket_dict: typing.Dict[int, typing.Dict],
+    user_session: UserSession,
 ):
     """ Read old data, compare it with the new data, rewrite new data, return diff """
-    logging.info("len(old_tickets_list) = %s", len(old_tickets_list))
-    logging.info("len(new_tickets_list) = %s", len(new_tickets_list))
-    old_ticket_dict: typing.Dict[
-        int, typing.Dict[str, typing.Union[None, int, str]]
-    ] = {ticket["id"]: ticket for ticket in old_tickets_list}
-    new_ticket_dict: typing.Dict[
-        int, typing.Dict[str, typing.Union[None, int, str]]
-    ] = {ticket["id"]: ticket for ticket in new_tickets_list}
+    logging.info("len(old_ticket_dict) = %s", len(old_ticket_dict))
+    logging.info("len(new_ticket_dict) = %s", len(new_ticket_dict))
+    logging.info("old_ticket_dict = %s", old_ticket_dict)
+    logging.info("new_ticket_dict = %s", new_ticket_dict)
+    # old_ticket_dict: typing.Dict[
+    #     int, typing.Dict[str, typing.Union[None, int, str]]
+    # ] = {ticket["id"]: ticket for ticket in old_tickets_list}
+    # new_ticket_dict: typing.Dict[
+    #     int, typing.Dict[str, typing.Union[None, int, str]]
+    # ] = {ticket["id"]: ticket for ticket in new_tickets_list}
 
     messages: typing.Dict[int, str] = dict()
     have_changes: bool = False
@@ -46,10 +49,10 @@ def check_diff(
             old_status = old_ticket_dict[ticket_id].get(STATUS, None)
             new_status = new_ticket_dict[ticket_id].get(STATUS, None)
             if old_status != new_status:
-                name: str = ""
-                if "name" in new_ticket_dict[ticket_id]:
-                    name = f"\"{new_ticket_dict[ticket_id]['name']}\""
-                date_mod: str = f"{new_ticket_dict[ticket_id].get('date_mod',None)}"
+                name: str = (
+                    '"' + new_ticket_dict[ticket_id].get("name", str(None)) + '"'
+                )
+                date_mod: str = new_ticket_dict[ticket_id].get("date_mod", str(None))
                 # messages[ticket_id] = f"Status: old = {old_status} new = {new_status}"
                 if new_status == 1:  # Новый
                     pass  # Do nothing
@@ -69,7 +72,8 @@ def check_diff(
                         + f" Дата и время изменения: {date_mod}"
                     )
                 elif new_status == 5:  # Решена
-                    solution: str = new_ticket_dict[ticket_id]
+                    # TODO write corrent value
+                    solution: str = user_session.get_last_solution(ticket_id)
                     messages[ticket_id] = (
                         f"По Вашей заявке с номером {ticket_id} {name} предложено решение: {solution}."
                         + f" Дата и время изменения: {date_mod}"
@@ -138,20 +142,21 @@ async def run_check(dbhelper: DBHelper):
         if not user_session.is_logged_in or user_session.glpi_id is None:
             # TODO notify user if he is suddenly unlogged (due password change or else)
             continue
-        old_tickets = dbhelper.all_tickets_glpi(user_session.glpi_id)
-        new_tickets = user_session.get_all_tickets()
+        old_tickets: typing.Dict[int, typing.Dict] = dbhelper.all_tickets_glpi(
+            user_session.glpi_id
+        )
+        new_tickets: typing.Dict[int, typing.Dict] = user_session.get_all_my_tickets(
+            open_only=False, full_info=False
+        )
         logging.debug(
             "checker.run_check: old_tickets = %d %s", len(old_tickets), old_tickets
         )
         logging.debug(
             "checker.run_check: new_tickets = %d %s", len(new_tickets), new_tickets
         )
-        messages, have_changes = check_diff(old_tickets, new_tickets)
+        messages, have_changes = check_diff(old_tickets, new_tickets, user_session=user_session)
         if have_changes:
             dbhelper.write_tickets_glpi(glpi_id=user_session.glpi_id, data=new_tickets)
-            # write_diff(
-            #     glpi_id=user_session.glpi_id, tickets=new_tickets, dbhelper=dbhelper
-            # )
 
         logging.info("checker.run_check: messages = %s", messages)
         for ticket_id in messages:

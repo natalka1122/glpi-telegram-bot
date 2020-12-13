@@ -81,13 +81,14 @@ class DBHelper(BaseStorage):
             result["ticket"] = self._tickets.to_dict()
         return result
 
-    def all_tickets_glpi(self, glpi_id: int):
+    def all_tickets_glpi(self, glpi_id: int) -> typing.Dict[int, typing.Dict]:
         """ Return all tickets for glpi user """
         with self._database.transaction():
-            if self._tickets:
-                if glpi_id in self._tickets:
-                    return bytes_to_dict(self._tickets[glpi_id])
-        return []
+            if self._tickets and glpi_id in self._tickets:
+                tickets:typing.Dict = bytes_to_dict(self._tickets[glpi_id])
+                logging.info("tickets = %s", tickets)
+                return {int(ticket_id): tickets[ticket_id] for ticket_id in tickets}
+        return {}
 
     def all_user(self):
         """ Return all user_id """

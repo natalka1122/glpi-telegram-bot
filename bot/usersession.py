@@ -1,6 +1,9 @@
 """Module for UserSession class"""
+from bot.app import ticket
 import logging
 import typing
+import html2text
+import html2markdown
 
 from aiogram.dispatcher.storage import FSMContext
 
@@ -8,12 +11,18 @@ import config
 import bot.glpi_api as glpi_api
 from bot.db.dbhelper import DBHelper
 
-# from bot.app import core
-
 LOGIN = "login"
 PASSWORD = "password"
 LOGGED_IN = "logged_in"
 GLPI_ID = "glpi_id"
+TICKET = "ticket"
+SOLUTION = "itilsolution"
+TICKET_ID = "2"
+REQUEST_USER_ID = "4"
+TICKET_STATUS = "12"
+TICKET_NAME = "1"
+TICKET_LAST_UPDATE = "19"
+CLOSED_TICKED_STATUS = "6"
 
 
 class StupidError(Exception):
@@ -50,9 +59,7 @@ class UserSession:
                 raise StupidError(
                     "UserSession.create: state == None and dbhelper == None"
                 )
-            state = FSMContext(
-                storage=dbhelper, user=self.user_id, chat=self.user_id
-            )
+            state = FSMContext(storage=dbhelper, user=self.user_id, chat=self.user_id)
         elif dbhelper is not None:
             raise StupidError(
                 f"UserSession.create: state == {state} and dbhelper == {dbhelper}"
@@ -180,9 +187,9 @@ class UserSession:
             auth=(self.login, self.password),
             apptoken=config.GLPI_APP_API_KEY,
         ) as glpi:
-            result = glpi.get_my_profiles()
-        logging.info("get_my_profiles = %s", result)
-        return result[0]["id"]
+            result: typing.Dict[str, typing.Any] = glpi.get_full_session()
+        # logging.info("get_full_session = %s", result)
+        return result.get("glpiID", None)
 
     async def add_field(self, key: str, data: str) -> None:
         """Add datafield to user_id in database
@@ -194,7 +201,6 @@ class UserSession:
         if self.state is None:
             raise StupidError("self.state = None")
         await self.state.update_data(data={key: data})
-
 
     async def pop_field(self, key: str, default: str = "") -> str:
         """Delete field from data and return it's value
@@ -218,21 +224,81 @@ class UserSession:
         await self.state.set_data(data)
         return result
 
-    def get_all_tickets(self) -> typing.List[typing.Dict]:
+    def get_all_my_tickets(
+        self, open_only: bool, full_info: bool
+    ) -> typing.Dict[int, typing.Dict]:
         """
         Return all tickets
         """
         if not self.is_logged_in:
-            return []
+            return {}
         # TODO error catch
-        # TODO request only my own tickets
-        # TODO request only open tickets
+        criteria = [
+            {
+                "field": REQUEST_USER_ID,
+                "searchtype": "equals",
+                "value": str(self.glpi_id),
+            }
+        ]
+        forcedisplay = [TICKET_NAME, TICKET_STATUS, TICKET_LAST_UPDATE]
         with glpi_api.connect(
             url=self.URL,
             auth=(self.login, self.password),
             apptoken=config.GLPI_APP_API_KEY,
         ) as glpi:
-            return glpi.get_all_items("Ticket", get_hateoas=False)
+            glpi_tickets: typing.List[typing.Dict[str, str]] = glpi.search(
+                TICKET, criteria=criteria, forcedisplay=forcedisplay, sort=TICKET_ID
+            )
+            logging.info("self.login = %s", self.login)
+            logging.info("criteria = %s", criteria)
+            logging.info("forcedisplay = %s", forcedisplay)
+            logging.info("my_ticket_id = %s", glpi_tickets)
+            if open_only:
+                glpi_tickets = list(
+                    filter(lambda x: x[TICKET_STATUS] != 6, glpi_tickets)
+                )
+            result: typing.Dict[int, typing.Dict] = {}
+            if full_info:
+                for elem in glpi_tickets:
+                    result[int(elem[TICKET_ID])] = glpi.get_item(
+                        TICKET, item_id=int(elem[TICKET_ID]), get_hateoas=False
+                    )
+            else:
+                for elem in glpi_tickets:
+                    result[int(elem[TICKET_ID])] = {
+                        "status": int(elem[TICKET_STATUS]),
+                        "name": elem[TICKET_NAME],
+                        "date_mod": elem[TICKET_LAST_UPDATE],
+                    }
+        return result
+
+    def get_one_ticket(self, ticket_id: int):
+        """
+        Return one ticket with ticket_id
+        """
+        with glpi_api.connect(
+            url=self.URL,
+            auth=(self.login, self.password),
+            apptoken=config.GLPI_APP_API_KEY,
+        ) as glpi:
+            return glpi.get_item(TICKET, item_id=ticket_id, get_hateoas=False)
+
+    def get_last_solution(self, ticket_id: int):
+        """
+        Return last proposed solution for ticket with ticket_id
+        """
+        with glpi_api.connect(
+            url=self.URL,
+            auth=(self.login, self.password),
+            apptoken=config.GLPI_APP_API_KEY,
+        ) as glpi:
+            solution: typing.Dict = glpi.get_sub_items(
+                TICKET, ticket_id, SOLUTION, get_hateoas=False
+            )
+            logging.info("solution = %s", solution)
+            return html2markdown.convert(
+                html2text.html2text(str(solution[-1].get("content")))
+            )
 
     def create_ticket(self, title, description, urgency):
         """
@@ -245,7 +311,7 @@ class UserSession:
                 apptoken=config.GLPI_APP_API_KEY,
             ) as glpi:
                 result = glpi.add(
-                    "ticket",
+                    TICKET,
                     {"name": title, "content": description, "urgency": urgency},
                 )
         except glpi_api.GLPIError as err:
@@ -255,14 +321,3 @@ class UserSession:
             return result[0]["id"]
 
         raise StupidError("Failed to add ticket: {}".format(result))
-
-    def get_one_ticket(self, ticket_id):
-        """
-        Return one ticket with ticket_id
-        """
-        with glpi_api.connect(
-            url=self.URL,
-            auth=(self.login, self.password),
-            apptoken=config.GLPI_APP_API_KEY,
-        ) as glpi:
-            return glpi.get_item("ticket", ticket_id)

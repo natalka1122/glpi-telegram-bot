@@ -78,9 +78,11 @@ async def list_all_tickets(user_id: int, state: FSMContext):
     user_session = UserSession(user_id=user_id)
     await user_session.create(state=state)
     try:
-        list_tickets: typing.List[typing.Dict] = user_session.get_all_tickets()
+        list_tickets: typing.Dict[int, typing.Dict] = user_session.get_all_my_tickets(
+            open_only=True, full_info=True
+        )
     except glpi_api.GLPIError as err:
-        logging.info("Ошибка %s", err)
+        logging.error("Ошибка %s", err)
         # TODO Catch error properly
         return
 
@@ -92,9 +94,16 @@ async def list_all_tickets(user_id: int, state: FSMContext):
         return
 
     for current_ticket in list_tickets:
-        await bot.send_message(
-            chat_id=user_id, text=show_ticket(current_ticket), reply_markup=no_keyboard
-        )
+        try:
+            await bot.send_message(
+                chat_id=user_id,
+                text=show_ticket(user_session.get_one_ticket(current_ticket)),
+                reply_markup=no_keyboard,
+            )
+        except glpi_api.GLPIError as err:
+            logging.error("Ошибка %s", err)
+            # TODO Catch error properly
+            return
         # await show_ticket(
         #     current_ticket, bot.send_message, user_id, reply_markup=no_keyboard
         # )
