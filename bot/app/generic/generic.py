@@ -4,6 +4,7 @@ import logging
 
 import typing
 from aiogram.dispatcher import FSMContext
+from bot.app import keyboard
 
 from bot.app.core import bot
 from bot.app.generic import onboarding
@@ -209,11 +210,11 @@ async def process_to_select_priority(
             title=title, description=description, urgency=priority_int
         )
     except StupidError as err:
-        message: str = f"Произошла неизвестная науке ошибка {err}"
+        message_text: str = f"Произошла неизвестная науке ошибка {err}"
     else:
-        message = f'Заявка "{title}" принята. Номер заявки - {ticket_id}'
-    logging.info(message)
-    await bot.send_message(user_id, message[:2000], reply_markup=no_keyboard)
+        message_text = f'Заявка "{title}" принята. Номер заявки - {ticket_id}'
+    logging.info(message_text)
+    await bot.send_message(user_id, message_text, reply_markup=no_keyboard)
     await Form.logged_in.set()
 
 
@@ -227,6 +228,55 @@ async def not_implemented(user_id: int) -> None:
     await bot.send_message(
         user_id, "{user_id} not implemented command", reply_markup=no_keyboard
     )
+
+
+async def approve_solution(
+    user_id: int,
+    ticket_id: int,
+    message_id: int,
+    message_text: str,
+    callback_id: str,
+    state: FSMContext,
+):
+    user_session = UserSession(user_id)
+    await user_session.create(state)
+    user_session.close_ticket(ticket_id)
+    # ddd= await bot.answer_callback_query(callback_id,text="TEXT",show_alert=True)
+    # logging.info("callback done %s", ddd)
+    await bot.edit_message_text(
+        message_text,
+        chat_id=user_id,
+        message_id=message_id,
+        reply_markup=keyboard.select_repeat_ticket(ticket_id),
+    )
+    ddd = await bot.answer_callback_query(callback_id)
+    logging.info("callback done %s", ddd)
+
+
+async def repeat_ticket(
+    user_id: int,
+    ticket_id: int,
+    callback_id: str,
+    state: FSMContext,
+):
+    user_session = UserSession(user_id)
+    await user_session.create(state)
+    ticket: typing.Dict = user_session.get_one_ticket(ticket_id)
+    title: str = ticket.get("name", str(None))
+    description: str = ticket.get("content", str(None))
+    priority_int: int = ticket.get("priority", str(None))
+    try:
+        ticket_id = user_session.create_ticket(
+            title=title, description=description, urgency=priority_int
+        )
+    except StupidError as err:
+        message_text: str = f"Произошла неизвестная науке ошибка {err}"
+    else:
+        message_text = f'Заявка "{title}" принята. Номер заявки - {ticket_id}'
+    logging.info(message_text)
+    await bot.send_message(user_id, message_text, reply_markup=no_keyboard)
+    ddd = await bot.answer_callback_query(callback_id)
+    logging.info("callback done %s", ddd)
 
 
 # UNKNOWN ==================================================================

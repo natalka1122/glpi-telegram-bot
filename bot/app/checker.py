@@ -3,9 +3,11 @@
 import typing
 import logging
 import asyncio
+import aiogram
 import aioschedule
 import config
 from bot.app.core import bot
+import bot.app.keyboard as keyboard
 from bot.db.dbhelper import DBHelper
 from bot.usersession import UserSession, StupidError
 
@@ -31,6 +33,8 @@ def check_diff(
 
     messages: typing.Dict[int, str] = dict()
     have_changes: bool = False
+    proposed_solutions = dict()
+    closed_tickets = dict()
     for ticket_id in old_ticket_dict.keys() | new_ticket_dict.keys():
         logging.info("got ticket_id %s", ticket_id)
         logging.info(
@@ -72,16 +76,16 @@ def check_diff(
                         + f" Дата и время изменения: {date_mod}"
                     )
                 elif new_status == 5:  # Решена
-                    # TODO write corrent value
                     solution: str = user_session.get_last_solution(ticket_id)
                     messages[ticket_id] = (
                         f"По Вашей заявке с номером {ticket_id} {name} предложено решение: {solution}."
                         + f" Дата и время изменения: {date_mod}"
-                        + " TODO add buttons"
                     )
+                    proposed_solutions[ticket_id] = messages[ticket_id]
                     # TODO Add buttons
                 elif new_status == 6:  # Закрыто
                     messages[ticket_id] = "TODO add button"
+                    closed_tickets[ticket_id] = messages[ticket_id]
                     # TODO Add button
                 else:
                     messages[
@@ -121,7 +125,7 @@ def check_diff(
 
         continue
     logging.info("messages = %s", messages)
-    return messages, have_changes
+    return (messages, proposed_solutions, closed_tickets), have_changes
 
 
 # def write_diff(dbhelper: DBHelper, replace_ticket_dict, delete_ticket_list):
@@ -130,6 +134,55 @@ def check_diff(
 #     # dbhelper.update_tickets(
 #     #     replace_ticket_dict=replace_ticket_dict, delete_ticket_id=delete_ticket_list
 #     # )
+
+
+async def process_messages(user_id, messages, proposed_solutions, closed_tickets):
+    """Sends messages about changed tickets to user
+
+    Args:
+        user_id ([type]): [description]
+        messages ([type]): [description]
+        proposed_solutions ([type]): [description]
+        closed_tickets ([type]): [description]
+    """
+    # TODO Write proper docstring
+    for ticket_id in proposed_solutions:
+        logging.info(
+            "proposed_solution: user_id = %s, ticket_id = %s message = %s",
+            user_id,
+            ticket_id,
+            messages[ticket_id],
+        )
+        message: aiogram.types.Message = await bot.send_message(
+            user_id,
+            f"proposed_solution: {messages[ticket_id]}",
+            reply_markup=keyboard.select_approve_refuse(ticket_id),
+        )
+        logging.info("message = %s %s", message.message_id, message)
+        del messages[ticket_id]
+
+    for ticket_id in closed_tickets:
+        logging.info(
+            "proposed_solution: user_id = %s, ticket_id = %s message = %s",
+            user_id,
+            ticket_id,
+            messages[ticket_id],
+        )
+        # await bot.send_message(
+        #     user_id,
+        #     f"closed_ticket: {messages[ticket_id]}",
+        #     reply_markup=keyboard.select_repeat_ticket(ticket_id),
+        # )
+        del messages[ticket_id]
+
+    for ticket_id in messages:
+        logging.info(
+            "user_id = %s, ticket_id = %s message = %s",
+            user_id,
+            ticket_id,
+            messages[ticket_id],
+        )
+        await bot.send_message(user_id, f"{messages[ticket_id]}")
 
 
 async def run_check(dbhelper: DBHelper):
@@ -154,19 +207,22 @@ async def run_check(dbhelper: DBHelper):
         logging.debug(
             "checker.run_check: new_tickets = %d %s", len(new_tickets), new_tickets
         )
-        messages, have_changes = check_diff(old_tickets, new_tickets, user_session=user_session)
+        messages, have_changes = check_diff(
+            old_tickets, new_tickets, user_session=user_session
+        )
         if have_changes:
             dbhelper.write_tickets_glpi(glpi_id=user_session.glpi_id, data=new_tickets)
+            logging.info("checker.run_check: messages = %s", messages)
+            await process_messages(user_id, *messages)
 
-        logging.info("checker.run_check: messages = %s", messages)
-        for ticket_id in messages:
-            logging.info(
-                "checker.run_check: user_id = %s, ticket_id = %s message = %s",
-                user_id,
-                ticket_id,
-                messages[ticket_id],
-            )
-            await bot.send_message(user_id, f"{messages[ticket_id]}")
+        # for ticket_id in messages:
+        #     logging.info(
+        #         "checker.run_check: user_id = %s, ticket_id = %s message = %s",
+        #         user_id,
+        #         ticket_id,
+        #         messages[ticket_id],
+        #     )
+        #     await bot.send_message(user_id, f"{messages[ticket_id]}")
 
 
 async def scheduler(dbhelper: DBHelper):

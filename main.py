@@ -17,10 +17,73 @@ from bot.app.core import dp
 from bot.app.generic import generic, onboarding
 from bot.app.bot_state import Form
 
-# import config
-
-
 # TODO add /cancel
+
+
+@dp.callback_query_handler(
+    lambda callback_query: callback_query.data
+    and callback_query.data.startswith("approve_solution"),
+    state="*",
+)
+async def process_callback_approve_solution(
+    callback_query: types.CallbackQuery, state: FSMContext
+):
+    # logging.info(
+    #     "type(callback_query) = %s callback_query.id = %s callback_query.from_user.id = %s",
+    #     type(callback_query),
+    #     callback_query.id,
+    #     callback_query.from_user.id,
+    # )
+    logging.info("callback_query = %s", callback_query)
+    callback_id: str = callback_query.id
+    message_id: int = callback_query.message.message_id
+    message_text: str = callback_query.message.text
+    user_id: int = callback_query.from_user.id
+    ticket_id: int = int(callback_query.data.split(":")[1])
+    logging.info("user_id = %s ticket_id = %s", user_id, ticket_id)
+    await generic.approve_solution(
+        user_id, ticket_id, message_id, message_text, callback_id, state
+    )
+
+
+@dp.callback_query_handler(
+    lambda callback_query: callback_query.data
+    and callback_query.data.startswith("refuse_solution"),
+    state="*",
+)
+async def process_callback_refuse_solution(callback_query: types.CallbackQuery):
+    logging.info(
+        "type(callback_query) = %s callback_query.id = %s callback_query.from_user.id = %s",
+        type(callback_query),
+        callback_query.id,
+        callback_query.from_user.id,
+    )
+    logging.info("callback_query = %s", callback_query)
+    user_id: int = callback_query.from_user.id
+    ticket_id: int = int(callback_query.data.split(":")[1])
+    logging.info("user_id = %s ticket_id = %s", user_id, ticket_id)
+
+
+@dp.callback_query_handler(
+    lambda callback_query: callback_query.data
+    and callback_query.data.startswith("repeat_ticket"),
+    state="*",
+)
+async def process_callback_repeat_ticket(
+    callback_query: types.CallbackQuery, state: FSMContext
+):
+    logging.info(
+        "type(callback_query) = %s callback_query.id = %s callback_query.from_user.id = %s",
+        type(callback_query),
+        callback_query.id,
+        callback_query.from_user.id,
+    )
+    logging.info("callback_query = %s", callback_query)
+    callback_id: str = callback_query.id
+    user_id: int = callback_query.from_user.id
+    ticket_id: int = int(callback_query.data.split(":")[1])
+    logging.info("user_id = %s ticket_id = %s", user_id, ticket_id)
+    await generic.repeat_ticket(user_id, ticket_id, callback_id, state)
 
 
 @dp.message_handler(commands=["start"], state="*")

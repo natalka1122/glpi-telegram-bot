@@ -280,7 +280,12 @@ class UserSession:
             auth=(self.login, self.password),
             apptoken=config.GLPI_APP_API_KEY,
         ) as glpi:
-            return glpi.get_item(TICKET, item_id=ticket_id, get_hateoas=False)
+            result = glpi.get_item(TICKET, item_id=ticket_id, get_hateoas=False)
+        if "content" in result:
+            result["content"] = html2markdown.convert(
+                html2text.html2text(str(result["content"]))
+            )
+        return result
 
     def get_last_solution(self, ticket_id: int) -> str:
         """
@@ -322,3 +327,14 @@ class UserSession:
             return result[0]["id"]
 
         raise StupidError("Failed to add ticket: {}".format(result))
+
+    def close_ticket(self, ticket_id: int):
+        with glpi_api.connect(
+            url=self.URL,
+            auth=(self.login, self.password),
+            apptoken=config.GLPI_APP_API_KEY,
+        ) as glpi:
+            result = glpi.update(
+                "ticket", {"id": ticket_id, "status": CLOSED_TICKED_STATUS}
+            )
+            logging.info("result = %s", result)
