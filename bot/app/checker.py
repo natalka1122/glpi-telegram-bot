@@ -163,7 +163,7 @@ async def process_messages(user_id, messages, proposed_solutions, closed_tickets
 
     for ticket_id in closed_tickets:
         logging.info(
-            "proposed_solution: user_id = %s, ticket_id = %s message = %s",
+            "closed_tickets: user_id = %s, ticket_id = %s message = %s",
             user_id,
             ticket_id,
             messages[ticket_id],
