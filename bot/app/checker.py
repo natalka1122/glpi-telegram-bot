@@ -155,7 +155,7 @@ async def process_messages(user_id, messages, proposed_solutions, closed_tickets
         )
         message: aiogram.types.Message = await bot.send_message(
             user_id,
-            f"proposed_solution: {messages[ticket_id]}",
+            messages[ticket_id],
             reply_markup=keyboard.select_approve_refuse(ticket_id),
         )
         logging.info("message = %s %s", message.message_id, message)
