@@ -15,5 +15,4 @@ class Form(StatesGroup):
     to_enter_description = State()  # 'Form:to_enter_description'
     to_select_priority = State()  # 'Form:to_select_priority'
 
-    to_confirm_closure = State()  # 'Form:to_confirm_closure'
     to_explain_decline = State()  # 'Form:to_explain_decline'

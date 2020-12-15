@@ -49,9 +49,11 @@ async def process_callback_approve_solution(
 @dp.callback_query_handler(
     lambda callback_query: callback_query.data
     and callback_query.data.startswith("refuse_solution"),
-    state="*",
+    state=Form.logged_in,
 )
-async def process_callback_refuse_solution(callback_query: types.CallbackQuery):
+async def process_callback_refuse_solution(
+    callback_query: types.CallbackQuery, state: FSMContext
+):
     logging.info(
         "type(callback_query) = %s callback_query.id = %s callback_query.from_user.id = %s",
         type(callback_query),
@@ -59,9 +61,43 @@ async def process_callback_refuse_solution(callback_query: types.CallbackQuery):
         callback_query.from_user.id,
     )
     logging.info("callback_query = %s", callback_query)
+    callback_id: str = callback_query.id
     user_id: int = callback_query.from_user.id
     ticket_id: int = int(callback_query.data.split(":")[1])
+    message_id: int = callback_query.message.message_id
+    message_text: str = callback_query.message.text
     logging.info("user_id = %s ticket_id = %s", user_id, ticket_id)
+    await generic.refuse_solution(
+        user_id, ticket_id, message_id, message_text, callback_id, state
+    )
+
+
+@dp.callback_query_handler(
+    lambda callback_query: callback_query.data
+    and callback_query.data.startswith("refuse_solution"),
+    state="*",
+)
+async def process_callback_refuse_solution_wrong_state(
+    callback_query: types.CallbackQuery, state: FSMContext
+):
+    logging.info(
+        "type(callback_query) = %s callback_query.id = %s callback_query.from_user.id = %s",
+        type(callback_query),
+        callback_query.id,
+        callback_query.from_user.id,
+    )
+    logging.info("callback_query = %s", callback_query)
+    callback_id: str = callback_query.id
+    user_id: int = callback_query.from_user.id
+    ticket_id: int = int(callback_query.data.split(":")[1])
+    current_state: typing.Union[str, None] = await state.get_state()
+    logging.info(
+        "user_id = %s ticket_id = %s current_state = %s",
+        user_id,
+        ticket_id,
+        current_state,
+    )
+    await generic.refuse_solution_wrong_state(callback_id)
 
 
 @dp.callback_query_handler(
@@ -222,6 +258,17 @@ async def to_select_priority(message: types.Message, state: FSMContext) -> None:
     await generic.process_to_select_priority(
         user_id=user_id, priority=text, state=state
     )
+
+
+@dp.message_handler(
+    content_types=types.ContentTypes.TEXT, state=Form.to_explain_decline
+)
+async def to_explain_decline(message: types.Message, state: FSMContext) -> None:
+    """Reacts on every text entered with the state Form.to_explain_decline"""
+    user_id: int = message.from_user.id
+    text = message.text
+
+    await generic.process_to_explain_decline(user_id, text, state)
 
 
 # UNKNOWN input

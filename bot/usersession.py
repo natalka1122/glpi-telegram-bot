@@ -141,12 +141,18 @@ class UserSession:
                     del data[GLPI_ID]
                 except KeyError:
                     pass
+                if flag_data_changed:
+                    await state.set_data(data=data)
+                raise
             else:
                 data[LOGGED_IN] = True
             flag_data_changed = True
-        if LOGGED_IN in data:
-            self.is_logged_in = data[LOGGED_IN]
-            self.glpi_id = data[GLPI_ID]
+        # if LOGGED_IN in data:
+        logging.info("data = %s", data)
+        self.is_logged_in = data.get(LOGGED_IN, False)
+        self.glpi_id = data.get(GLPI_ID, None)
+        # if GLPI_ID in data:
+        #     self.glpi_id = data[GLPI_ID]
         if flag_data_changed:
             await state.set_data(data=data)
 
@@ -329,6 +335,7 @@ class UserSession:
         raise StupidError("Failed to add ticket: {}".format(result))
 
     def close_ticket(self, ticket_id: int):
+        """ Close ticket """
         with glpi_api.connect(
             url=self.URL,
             auth=(self.login, self.password),
@@ -338,3 +345,21 @@ class UserSession:
                 "ticket", {"id": ticket_id, "status": CLOSED_TICKED_STATUS}
             )
             logging.info("result = %s", result)
+
+    def refuse_ticket(self, ticket_id: int, text: str):
+        """ Add followup and reopen ticket """
+        with glpi_api.connect(
+            url=self.URL,
+            auth=(self.login, self.password),
+            apptoken=config.GLPI_APP_API_KEY,
+        ) as glpi:
+            return glpi.add(
+                "itilfollowup",
+                {
+                    "itemtype": TICKET,
+                    "items_id": ticket_id,
+                    "content": text,
+                    "is_private": 0,
+                    "add_reopen": 1,
+                },
+            )

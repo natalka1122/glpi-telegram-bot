@@ -279,6 +279,51 @@ async def repeat_ticket(
     logging.info("callback done %s", ddd)
 
 
+async def refuse_solution(
+    user_id: int,
+    ticket_id: int,
+    message_id: int,
+    message_text: str,
+    callback_id: str,
+    state: FSMContext,
+):
+    await bot.edit_message_text(
+        message_text,
+        chat_id=user_id,
+        message_id=message_id,
+        reply_markup=None,
+    )
+
+    user_session = UserSession(user_id)
+    await user_session.create(state)
+    await user_session.add_field("ticket_id", str(ticket_id))
+
+    await Form.to_explain_decline.set()
+    await bot.send_message(
+        user_id, "Заполните причину отклонения", reply_markup=no_keyboard
+    )
+    ddd = await bot.answer_callback_query(callback_id)
+    logging.info("callback done %s", ddd)
+
+
+async def process_to_explain_decline(user_id: int, text: str, state: FSMContext):
+    user_session = UserSession(user_id)
+    await user_session.create(state)
+    ticket_id: int = int(await user_session.pop_field(key="ticket_id"))
+    user_session.refuse_ticket(ticket_id, text)
+    await Form.to_enter_login.set()
+    await bot.send_message(user_id, "Принято", reply_markup=no_keyboard)
+
+
+async def refuse_solution_wrong_state(callback_id: str):
+    ddd = await bot.answer_callback_query(
+        callback_id,
+        text="Завершите текущие дела, и нажмите кнопку еще раз",
+        show_alert=True,
+    )
+    logging.info("callback done %s", ddd)
+
+
 # UNKNOWN ==================================================================
 async def text_message(user_id):
     """React on something it cannot understand

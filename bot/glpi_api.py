@@ -181,11 +181,9 @@ class GLPI:
         session_token = self._init_session(apptoken, auth)
 
         # Set required headers.
-        self.session.headers = {
-            "Content-Type": "application/json",
-            "Session-Token": session_token,
-            "App-Token": apptoken,
-        }
+        self.session.headers["Content-Type"] ="application/json"
+        self.session.headers["Session-Token"] = session_token
+        self.session.headers["App-Token"] = apptoken
 
         # Use for caching field id/uid map.
         self._fields = {}
