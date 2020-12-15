@@ -54,9 +54,9 @@ def check_diff(
             new_status = new_ticket_dict[ticket_id].get(STATUS, None)
             if old_status != new_status:
                 name: str = (
-                    '"' + new_ticket_dict[ticket_id].get("name", str(None)) + '"'
+                    '"' + str(new_ticket_dict[ticket_id].get("name", None)) + '"'
                 )
-                date_mod: str = new_ticket_dict[ticket_id].get("date_mod", str(None))
+                date_mod: str = str(new_ticket_dict[ticket_id].get("date_mod", None))
                 # messages[ticket_id] = f"Status: old = {old_status} new = {new_status}"
                 if new_status == 1:  # Новый
                     pass  # Do nothing

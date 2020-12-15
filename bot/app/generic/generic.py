@@ -240,7 +240,7 @@ async def approve_solution(
 ):
     user_session = UserSession(user_id)
     await user_session.create(state)
-    user_session.close_ticket(ticket_id)
+    user_session.approve_ticket_solution(ticket_id)
     # ddd= await bot.answer_callback_query(callback_id,text="TEXT",show_alert=True)
     # logging.info("callback done %s", ddd)
     await bot.edit_message_text(
@@ -310,8 +310,8 @@ async def process_to_explain_decline(user_id: int, text: str, state: FSMContext)
     user_session = UserSession(user_id)
     await user_session.create(state)
     ticket_id: int = int(await user_session.pop_field(key="ticket_id"))
-    user_session.refuse_ticket(ticket_id, text)
-    await Form.to_enter_login.set()
+    user_session.refuse_ticket_solition(ticket_id, text)
+    await Form.logged_in.set()
     await bot.send_message(user_id, "Принято", reply_markup=no_keyboard)
 
 

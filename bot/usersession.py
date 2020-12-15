@@ -334,19 +334,29 @@ class UserSession:
 
         raise StupidError("Failed to add ticket: {}".format(result))
 
-    def close_ticket(self, ticket_id: int):
+    def approve_ticket_solution(self, ticket_id: int):
         """ Close ticket """
         with glpi_api.connect(
             url=self.URL,
             auth=(self.login, self.password),
             apptoken=config.GLPI_APP_API_KEY,
         ) as glpi:
-            result = glpi.update(
-                "ticket", {"id": ticket_id, "status": CLOSED_TICKED_STATUS}
+            # result = glpi.update(
+            #     "ticket", {"id": ticket_id, "status": CLOSED_TICKED_STATUS}
+            # )
+            result = glpi.add(
+                "itilfollowup",
+                {
+                    "itemtype": TICKET,
+                    "items_id": ticket_id,
+                    "content": "",
+                    "is_private": 0,
+                    "add_close": 1,
+                },
             )
             logging.info("result = %s", result)
 
-    def refuse_ticket(self, ticket_id: int, text: str):
+    def refuse_ticket_solition(self, ticket_id: int, text: str):
         """ Add followup and reopen ticket """
         with glpi_api.connect(
             url=self.URL,
