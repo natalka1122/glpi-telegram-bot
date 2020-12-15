@@ -30,7 +30,7 @@ GLPI_APP_API_KEY: str = os.getenv("GLPI_APP_API_KEY", default="")
 
 CHECK_PERIOD = int(os.getenv("CHECK_PERIOD", default="300"))
 
-_data_dir: str = os.getenv("DATA_DIR", default="data/")
+_data_dir: str = os.getenv("DATA_DIR", default="/data/")
 os.makedirs(_data_dir, exist_ok=True)
 DB_FILE: str = _data_dir + "db.db"
 LOG_FILENAME: str = _data_dir + "log.txt"
