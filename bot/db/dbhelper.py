@@ -11,6 +11,20 @@ DATA = "data"
 BUCKET = "bucket"
 
 
+def bytes_to_int(source: bytes) -> int:
+    """Convert bytes into dict
+
+    Args:
+        source (bytes): Source string in bytes
+
+    Returns:
+        typing.Dict: Resulting dict
+    """
+    # logging.info("source = %s", source)
+    # logging.info("result = %s", json.loads(source.decode("utf8")))
+    return int(source.decode("utf8"))
+
+
 def bytes_to_dict(source: bytes) -> typing.Dict:
     """Convert bytes into dict
 
@@ -60,11 +74,11 @@ class DBHelper(BaseStorage):
         # for key in export:
         #     logging.info("key = %s data = %s", key, export[key])
 
-    async def close(self):
+    async def close(self) -> None:
         logging.debug("DBHelper close")
         self._database.close()
 
-    async def wait_closed(self):
+    async def wait_closed(self) -> None:
         logging.debug("DBHelper wait_closed")
 
     def export(self) -> typing.Dict:
@@ -85,12 +99,12 @@ class DBHelper(BaseStorage):
         """ Return all tickets for glpi user """
         with self._database.transaction():
             if self._tickets and glpi_id in self._tickets:
-                tickets:typing.Dict = bytes_to_dict(self._tickets[glpi_id])
+                tickets: typing.Dict = bytes_to_dict(self._tickets[glpi_id])
                 logging.info("tickets = %s", tickets)
                 return {int(ticket_id): tickets[ticket_id] for ticket_id in tickets}
         return {}
 
-    def all_user(self):
+    def all_user(self) -> typing.List[int]:
         """ Return all user_id """
         logging.info("dbhelper.all_user")
         with self._database.transaction():
@@ -101,9 +115,11 @@ class DBHelper(BaseStorage):
             )
             if self._userid.keys() is None:
                 return []
-            return map(bytes_to_dict, self._userid.keys())
+            return list(map(bytes_to_int, self._userid.keys()))
 
-    def write_tickets_glpi(self, glpi_id: int, data):
+    def write_tickets_glpi(
+        self, glpi_id: int, data: typing.Dict[int, typing.Dict]
+    ) -> None:
         """ Write tickets corresponding to specific glpi_id user """
         with self._database.transaction():
             self._tickets[glpi_id] = dict_to_bytes(data)
@@ -181,7 +197,7 @@ class DBHelper(BaseStorage):
         self,
         chat: typing.Union[str, int, None] = None,
         user: typing.Union[str, int, None] = None,
-        whole_data: typing.Dict = None,
+        whole_data: typing.Optional[typing.Dict] = None,
     ) -> None:
         """Writes all known data for specific user to database
 
@@ -235,7 +251,7 @@ class DBHelper(BaseStorage):
         chat: typing.Union[str, int, None] = None,
         user: typing.Union[str, int, None] = None,
         data: typing.Dict,
-    ):
+    ) -> None:
         logging.debug("DBHelper set_data")
         whole_data = self._get_whole_data(chat, user)
         whole_data[DATA] = data
@@ -247,8 +263,8 @@ class DBHelper(BaseStorage):
         chat: typing.Union[str, int, None],
         user: typing.Union[str, int, None],
         data: typing.Dict,
-        **kwargs,
-    ):
+        **kwargs: typing.Dict[str, typing.Any],
+    ) -> None:
         logging.debug("DBHelper update_data")
         whole_data = self._get_whole_data(chat, user)
         whole_data["data"].update(data, **kwargs)
@@ -290,7 +306,7 @@ class DBHelper(BaseStorage):
         chat: typing.Union[str, int, None],
         user: typing.Union[str, int, None],
         bucket: typing.Dict,
-    ):
+    ) -> None:
         # TODO under construction
         raise NotImplementedError
 
@@ -300,7 +316,7 @@ class DBHelper(BaseStorage):
         chat: typing.Union[str, int, None],
         user: typing.Union[str, int, None],
         bucket: typing.Dict,
-        **kwargs,
-    ):
+        **kwargs: typing.Dict[str, typing.Any],
+    ) -> None:
         # TODO under construction
         raise NotImplementedError

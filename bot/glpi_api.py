@@ -4,16 +4,14 @@ provided by the API and manage HTTP return codes.
 
 import os
 import re
-import sys
 import logging
-import warnings
+import typing
 from base64 import b64encode
 from contextlib import contextmanager
 from functools import wraps
 
 import requests
 import urllib3
-from urllib3.exceptions import InsecureRequestWarning
 
 _UPLOAD_MANIFEST = (
     '{{ "input": {{ "name": "{name:s}", "_filename" : ["{filename:s}"] }} }}'
@@ -35,39 +33,19 @@ _WARN_DEL_ERR = (
 _FILENAME_RE = re.compile('^filename="(.+)";')
 
 
-# class GLPIErrorLogin(Exception):
-#     pass
-
-
-# class GLPIErrorForbidden(Exception):
-#     pass
-
-
-# class GLPIErrorNoServer(Exception):
-#     pass
-
-
-# class GLPIErrorUnknown(Exception):
-#     pass
-
-
 class GLPIError(Exception):
     """Exception raised by this module."""
 
     # TODO Add error handling
 
-    # def __new__(cls, msg: str) -> Exception:
-    #     if "ERROR_GLPI_LOGIN" in msg:
-    #         return GLPIErrorLogin(msg)
-    #     if "ERROR_NOT_ALLOWED_IP" in msg:
-    #         return GLPIErrorForbidden(msg)
-    #     if "ERROR_APP_TOKEN_PARAMETERS_MISSING" in msg:
-    #         return GLPIErrorForbidden(msg)
-    #     return GLPIErrorUnknown(msg)
-
 
 @contextmanager
-def connect(url, apptoken, auth, verify_certs=True):
+def connect(  # type: ignore
+    url: str,
+    apptoken: str,
+    auth: typing.Union[str, typing.Tuple[str, str]],
+    verify_certs: bool = True,
+):
     """Context manager that authenticate to GLPI when enter and kill application
     session in GLPI when leaving:
 
@@ -94,27 +72,18 @@ def connect(url, apptoken, auth, verify_certs=True):
         glpi.kill_session()
 
 
-def _raise(msg):
-    """Raise ``GLPIError`` exception with ``msg`` message.
-
-    In Python 2, exceptions expect ``str`` by default. ``requests`` module
-    returns unicode strings and ``__future__.unicode_literals`` is used for
-    ensuring all strings are ``unicode`` (prevent the use of ``u''`` and
-    make strings manipulations easier). So for Python 2 we need to encode
-    to ``str`` the message.
-    """
-    if sys.version_info.major < 3:
-        msg = msg.encode("utf-8")
+def _raise(msg: str) -> None:
+    """Raise ``GLPIError`` exception with ``msg`` message."""
     raise GLPIError(msg)
 
 
-def _glpi_error(response):
+def _glpi_error(response: requests.Response) -> None:
     """GLPI errors message are returned in a list of two elements. The first
     element is the key of the error and the second the message."""
     _raise("({}) {}".format(*response.json()))
 
 
-def _unknown_error(response):
+def _unknown_error(response: requests.Response) -> None:
     """Helper for returning a HTTP code and response on non managed status
     code."""
     _raise(
@@ -124,19 +93,21 @@ def _unknown_error(response):
     )
 
 
-def _convert_bools(kwargs):
+def _convert_bools(kwargs: typing.Dict) -> typing.Dict:
     return {
         key: str(val).lower() if isinstance(val, bool) else val
         for key, val in kwargs.items()
     }
 
 
-def _catch_errors(func):
+def _catch_errors(func: typing.Callable) -> typing.Callable:
     """Decorator function for catching communication error
     and raising an exception."""
 
     @wraps(func)
-    def wrapper(self, *args, **kwargs):
+    def wrapper(
+        self: object, *args: typing.Any, **kwargs: typing.Any
+    ) -> typing.Callable:
         try:
             return func(self, *args, **kwargs)
         except requests.exceptions.RequestException as err:
@@ -165,7 +136,13 @@ class GLPI:
                    auth=('USERNAME', 'PASSWORD'))
     """
 
-    def __init__(self, url, apptoken, auth, verify_certs=True):
+    def __init__(
+        self,
+        url: str,
+        apptoken: str,
+        auth: typing.Union[str, typing.Tuple[str, str]],
+        verify_certs: bool = True,
+    ):
         """Connect to GLPI and retrieve session token which is put in a
         ``requests`` session as attribute.
         """
@@ -174,26 +151,30 @@ class GLPI:
         # Initialize session.
         self.session = requests.Session()
         if not verify_certs:
-            urllib3.disable_warnings(InsecureRequestWarning)
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
             self.session.verify = False
 
         # Connect and retrieve token.
         session_token = self._init_session(apptoken, auth)
 
         # Set required headers.
-        self.session.headers["Content-Type"] ="application/json"
+        self.session.headers["Content-Type"] = "application/json"
         self.session.headers["Session-Token"] = session_token
         self.session.headers["App-Token"] = apptoken
 
         # Use for caching field id/uid map.
-        self._fields = {}
+        self._fields: typing.Dict[str, typing.Dict] = {}
 
-    def _set_method(self, *endpoints):
+    def _set_method(
+        self, *endpoints: typing.Union[str, int, typing.Tuple[typing.Any, ...]]
+    ) -> str:
         """Generate the URL from ``endpoints``."""
         return "/".join(str(part) for part in [self.url.strip("/"), *endpoints])
 
     @_catch_errors
-    def _init_session(self, apptoken, auth):
+    def _init_session(
+        self, apptoken: str, auth: typing.Union[str, typing.Tuple[str, str]]
+    ) -> str:
         """API documentation
         <https://github.com/glpi-project/glpi/blob/master/apirest.md#init-session>`__
 
@@ -223,14 +204,15 @@ class GLPI:
             url=self._set_method("initSession"), headers=init_headers
         )
 
-        return {
-            200: lambda r: r.json()["session_token"],
-            400: _glpi_error,
-            401: _glpi_error,
-        }.get(response.status_code, _unknown_error)(response)
+        if response.status_code == 200:
+            return response.json()["session_token"]
+        if response.status_code in [400, 401]:
+            _glpi_error(response)
+        _unknown_error(response)
+        return ""
 
     @_catch_errors
-    def kill_session(self):
+    def kill_session(self) -> str:
         """`API documentation
         <https://github.com/glpi-project/glpi/blob/master/apirest.md#kill-session>`__
 
@@ -246,12 +228,15 @@ class GLPI:
             GLPIError: (ERROR_SESSION_TOKEN_INVALID) session_token semble incorrect
         """
         response = self.session.get(self._set_method("killSession"))
-        {200: lambda r: r.text, 400: _glpi_error, 401: _glpi_error}.get(
-            response.status_code, _unknown_error
-        )(response)
+        if response.status_code == 200:
+            return response.text
+        if response.status_code in [400, 401]:
+            _glpi_error(response)
+        _unknown_error(response)
+        return ""
 
     @_catch_errors
-    def get_my_profiles(self):
+    def get_my_profiles(self) -> str:
         """`API documentation
         <https://github.com/glpi-project/glpi/blob/master/apirest.md#get-my-profiles>`__
 
@@ -268,14 +253,20 @@ class GLPI:
               'entities': [{'id': 0, 'name': 'Root entity', 'is_recursive': 1}]}]
         """
         response = self.session.get(self._set_method("getMyProfiles"))
-        return {
-            200: lambda r: r.json()["myprofiles"],
-            400: _glpi_error,
-            401: _glpi_error,
-        }.get(response.status_code, _unknown_error)(response)
+        if response.status_code == 200:
+            return response.json()["myprofiles"]
+        if response.status_code in [400, 401]:
+            _glpi_error(response)
+        _unknown_error(response)
+        return ""
+        # return {
+        #     200: lambda r: r.json()["myprofiles"],
+        #     400: _glpi_error,
+        #     401: _glpi_error,
+        # }.get(response.status_code, _unknown_error)(response)
 
     @_catch_errors
-    def get_active_profile(self):
+    def get_active_profile(self) -> typing.Dict:
         """`API documentation
         <https://github.com/glpi-project/glpi/blob/master/apirest.md#get-active-profile>`__
 
@@ -291,14 +282,20 @@ class GLPI:
              ...
         """
         response = self.session.get(self._set_method("getActiveProfile"))
-        return {
-            200: lambda r: r.json()["active_profile"],
-            400: _glpi_error,
-            401: _glpi_error,
-        }.get(response.status_code, _unknown_error)(response)
+        if response.status_code == 200:
+            return response.json()["active_profile"]
+        if response.status_code in [400, 401]:
+            _glpi_error(response)
+        _unknown_error(response)
+        return dict()
+        # return {
+        #     200: lambda r: r.json()["active_profile"],
+        #     400: _glpi_error,
+        #     401: _glpi_error,
+        # }.get(response.status_code, _unknown_error)(response)
 
     @_catch_errors
-    def set_active_profile(self, profile_id):
+    def set_active_profile(self, profile_id: int) -> bool:
         """`API documentation
         <https://github.com/glpi-project/glpi/blob/master/apirest.md#change-active-profile>`__
 
@@ -317,15 +314,21 @@ class GLPI:
         response = self.session.post(
             self._set_method("changeActiveProfile"), json={"profiles_id": profile_id}
         )
-        {
-            200: lambda r: bool(response.text),
-            400: _glpi_error,
-            401: _glpi_error,
-            404: _glpi_error,
-        }.get(response.status_code, _unknown_error)(response)
+        if response.status_code == 200:
+            return bool(response.text)
+        if response.status_code in [400, 401]:
+            _glpi_error(response)
+        _unknown_error(response)
+        return False
+        # {
+        #     200: lambda r: bool(response.text),
+        #     400: _glpi_error,
+        #     401: _glpi_error,
+        #     404: _glpi_error,
+        # }.get(response.status_code, _unknown_error)(response)
 
     @_catch_errors
-    def get_my_entities(self):
+    def get_my_entities(self) -> typing.List[typing.Dict]:
         """`API documentation
         <https://github.com/glpi-project/glpi/blob/master/apirest.md#get-my-entities>`__
 
@@ -338,14 +341,20 @@ class GLPI:
             [{'id': 0, 'name': 'Root entity'}]
         """
         response = self.session.get(self._set_method("getMyEntities"))
-        return {
-            200: lambda r: r.json()["myentities"],
-            400: _glpi_error,
-            401: _glpi_error,
-        }.get(response.status_code, _unknown_error)(response)
+        if response.status_code == 200:
+            return response.json()["myentities"]
+        if response.status_code in [400, 401]:
+            _glpi_error(response)
+        _unknown_error(response)
+        return list()
+        # return {
+        #     200: lambda r: r.json()["myentities"],
+        #     400: _glpi_error,
+        #     401: _glpi_error,
+        # }.get(response.status_code, _unknown_error)(response)
 
     @_catch_errors
-    def get_active_entities(self):
+    def get_active_entities(self) -> typing.Dict:
         """`API documentation
         <https://github.com/glpi-project/glpi/blob/master/apirest.md#get-active-entities>`_
 
@@ -359,14 +368,20 @@ class GLPI:
              'active_entities': [{'id': 0}, {'id': 3}, {'id': 2}, {'id': 1}]}
         """
         response = self.session.get(self._set_method("getActiveEntities"))
-        return {
-            200: lambda r: r.json()["active_entity"],
-            400: _glpi_error,
-            401: _glpi_error,
-        }.get(response.status_code, _unknown_error)(response)
+        if response.status_code == 200:
+            return response.json()["active_entity"]
+        if response.status_code in [400, 401]:
+            _glpi_error(response)
+        _unknown_error(response)
+        return dict()
+        # return {
+        #     200: lambda r: r.json()["active_entity"],
+        #     400: _glpi_error,
+        #     401: _glpi_error,
+        # }.get(response.status_code, _unknown_error)(response)
 
     @_catch_errors
-    def set_active_entities(self, entity_id, is_recursive=False):
+    def set_active_entities(self, entity_id: int, is_recursive: bool = False) -> bool:
         """`API documentation
         <https://github.com/glpi-project/glpi/blob/master/apirest.md#change-active-entities>`__
 
@@ -380,14 +395,20 @@ class GLPI:
         response = self.session.post(
             self._set_method("changeActiveEntities"), json=data
         )
-        return {
-            200: lambda r: bool(response.text),
-            400: _glpi_error,
-            401: _glpi_error,
-        }.get(response.status_code, _unknown_error)(response)
+        if response.status_code == 200:
+            return bool(response.text)
+        if response.status_code in [400, 401]:
+            _glpi_error(response)
+        _unknown_error(response)
+        return False
+        # return {
+        #     200: lambda r: bool(response.text),
+        #     400: _glpi_error,
+        #     401: _glpi_error,
+        # }.get(response.status_code, _unknown_error)(response)
 
     @_catch_errors
-    def get_full_session(self):
+    def get_full_session(self) -> typing.Dict:
         """`API documentation
         <https://github.com/glpi-project/glpi/blob/master/apirest.md#get-full-session>`__
 
@@ -402,14 +423,20 @@ class GLPI:
              ...
         """
         response = self.session.get(self._set_method("getFullSession"))
-        return {
-            200: lambda r: r.json()["session"],
-            400: _glpi_error,
-            401: _glpi_error,
-        }.get(response.status_code, _unknown_error)(response)
+        if response.status_code == 200:
+            return response.json()["session"]
+        if response.status_code in [400, 401]:
+            _glpi_error(response)
+        _unknown_error(response)
+        return {}
+        # return {
+        #     200: lambda r: r.json()["session"],
+        #     400: _glpi_error,
+        #     401: _glpi_error,
+        # }.get(response.status_code, _unknown_error)(response)
 
     @_catch_errors
-    def get_config(self):
+    def get_config(self) -> typing.Dict:
         """`API documentation
         <https://github.com/glpi-project/glpi/blob/master/apirest.md#get-glpi-config>`__
 
@@ -424,12 +451,20 @@ class GLPI:
             ...
         """
         response = self.session.get(self._set_method("getGlpiConfig"))
-        return {200: lambda r: r.json(), 400: _glpi_error}.get(
-            response.status_code, _unknown_error
-        )(response)
+        if response.status_code == 200:
+            return response.json()
+        if response.status_code == 400:
+            _glpi_error(response)
+        _unknown_error(response)
+        return {}
+        # return {200: lambda r: r.json(), 400: _glpi_error}.get(
+        #     response.status_code, _unknown_error
+        # )(response)
 
     @_catch_errors
-    def get_item(self, itemtype, item_id, **kwargs):
+    def get_item(
+        self, itemtype: str, item_id: int, **kwargs: typing.Any
+    ) -> typing.Optional[typing.Dict]:
         """`API documentation
         <https://github.com/glpi-project/glpi/blob/master/apirest.md#get-an-item)>`__
 
@@ -459,16 +494,24 @@ class GLPI:
         response = self.session.get(
             self._set_method(itemtype, item_id), params=_convert_bools(kwargs)
         )
-        return {
-            200: lambda r: r.json(),
-            400: _glpi_error,
-            401: _glpi_error,
-            # If object is not found, return None.
-            404: lambda r: None,
-        }.get(response.status_code, _unknown_error)(response)
+        if response.status_code == 200:
+            return response.json()
+        if response.status_code in [400, 401]:
+            _glpi_error(response)
+        if response.status_code == 404:
+            return None
+        _unknown_error(response)
+        return None
+        # return {
+        #     200: lambda r: r.json(),
+        #     400: _glpi_error,
+        #     401: _glpi_error,
+        #     # If object is not found, return None.
+        #     404: lambda r: None,
+        # }.get(response.status_code, _unknown_error)(response)
 
     @_catch_errors
-    def get_all_items(self, itemtype, **kwargs):
+    def get_all_items(self, itemtype: str, **kwargs: typing.Any) -> typing.Dict:
         """`API documentation
         <https://github.com/glpi-project/glpi/blob/master/apirest.md#get-all-items>`__
 
@@ -490,15 +533,23 @@ class GLPI:
         response = self.session.get(
             self._set_method(itemtype), params=_convert_bools(kwargs)
         )
-        return {
-            200: lambda r: r.json(),
-            206: lambda r: r.json(),
-            400: _glpi_error,
-            401: _glpi_error,
-        }.get(response.status_code, _unknown_error)(response)
+        if response.status_code in [200, 206]:
+            return response.json()
+        if response.status_code in [400, 401]:
+            _glpi_error(response)
+        _unknown_error(response)
+        return dict()
+        # return {
+        #     200: lambda r: r.json(),
+        #     206: lambda r: r.json(),
+        #     400: _glpi_error,
+        #     401: _glpi_error,
+        # }.get(response.status_code, _unknown_error)(response)
 
     @_catch_errors
-    def get_sub_items(self, itemtype, item_id, sub_itemtype, **kwargs):
+    def get_sub_items(
+        self, itemtype: str, item_id: int, sub_itemtype: str, **kwargs: typing.Any
+    ) -> typing.Dict:
         """`API documentation
         <https://github.com/glpi-project/glpi/blob/master/apirest.md#get-sub-items>`__
 
@@ -517,12 +568,18 @@ class GLPI:
         """
         url = self._set_method(itemtype, item_id, sub_itemtype)
         response = self.session.get(url, params=_convert_bools(kwargs))
-        return {200: lambda r: r.json(), 400: _glpi_error, 401: _glpi_error}.get(
-            response.status_code, _unknown_error
-        )(response)
+        if response.status_code == 200:
+            return response.json()
+        if response.status_code in [400, 401]:
+            _glpi_error(response)
+        _unknown_error(response)
+        return dict()
+        # return {200: lambda r: r.json(), 400: _glpi_error, 401: _glpi_error}.get(
+        #     response.status_code, _unknown_error
+        # )(response)
 
     @_catch_errors
-    def get_multiple_items(self, *items):
+    def get_multiple_items(self, *items: typing.Dict) -> typing.List[typing.Dict]:
         """`API documentation
         <https://github.com/glpi-project/glpi/blob/master/apirest.md#get-multiple-items>`__
 
@@ -542,7 +599,7 @@ class GLPI:
                ...}]
         """
 
-        def format_items(items):
+        def format_items(items: typing.Tuple[typing.Dict, ...]) -> typing.Dict:
             return {
                 "items[{:d}][{:s}]".format(idx, key): value
                 for idx, item in enumerate(items)
@@ -552,12 +609,18 @@ class GLPI:
         response = self.session.get(
             self._set_method("getMultipleItems"), params=format_items(items)
         )
-        return {200: lambda r: r.json(), 400: _glpi_error, 401: _glpi_error}.get(
-            response.status_code, _unknown_error
-        )(response)
+        if response.status_code == 200:
+            return response.json()
+        if response.status_code in [400, 401]:
+            _glpi_error(response)
+        _unknown_error(response)
+        return list()
+        # return {200: lambda r: r.json(), 400: _glpi_error, 401: _glpi_error}.get(
+        #     response.status_code, _unknown_error
+        # )(response)
 
     @_catch_errors
-    def list_search_options(self, itemtype, raw=False):
+    def list_search_options(self, itemtype: str, raw: bool = False) -> typing.Dict:
         """`API documentation
         <https://github.com/glpi-project/glpi/blob/master/apirest.md#list-searchoptions>`__
 
@@ -579,11 +642,17 @@ class GLPI:
             self._set_method("listSearchOptions", itemtype),
             params="raw" if raw else None,
         )
-        return {200: lambda r: r.json(), 400: _glpi_error, 401: _glpi_error}.get(
-            response.status_code, _unknown_error
-        )(response)
+        if response.status_code == 200:
+            return response.json()
+        if response.status_code in [400, 401]:
+            _glpi_error(response)
+        _unknown_error(response)
+        return dict()
+        # return {200: lambda r: r.json(), 400: _glpi_error, 401: _glpi_error}.get(
+        #     response.status_code, _unknown_error
+        # )(response)
 
-    def _map_fields(self, itemtype):
+    def _map_fields(self, itemtype: str) -> typing.Dict:
         """Private method that returns a mapping between fields uid and fields
         id."""
         return {
@@ -592,7 +661,7 @@ class GLPI:
             if "uid" in field
         }
 
-    def field_id(self, itemtype, field_uid, refresh=False):
+    def field_id(self, itemtype: str, field_uid: str, refresh: bool = False) -> int:
         """Return ``itemtype`` field id from ``field_uid``. Each ``itemtype``
         are "cached" (in *_fields* attribute) and will be retrieve once except
         if ``refresh`` is set.
@@ -607,7 +676,7 @@ class GLPI:
             self._fields[itemtype] = self._map_fields(itemtype)
         return self._fields[itemtype][str(field_uid)]
 
-    def field_uid(self, itemtype, field_id, refresh=False):
+    def field_uid(self, itemtype: str, field_id: int, refresh: bool = False) -> str:
         """Return ``itemtype`` field uid from ``field_id``. Each ``itemtype``
         are "cached" (in *_fields* attribute) and will be retrieve once except
         if ``refresh`` is set.
@@ -626,7 +695,7 @@ class GLPI:
         ]
 
     @_catch_errors
-    def search(self, itemtype, **kwargs):
+    def search(self, itemtype: str, **kwargs: typing.Any) -> typing.List:
         """`API documentation
         <https://github.com/glpi-project/glpi/blob/master/apirest.md#search-items>`__
 
@@ -654,12 +723,15 @@ class GLPI:
             [{'1': 'test', '80': 'Root entity', '45': 'Ubuntu', '46': 16.04}]
         """
         # Function for mapping field id from field uid if field_id is not a number.
-        def field_id(itemtype, field):
-            return (
-                int(field)
-                if re.match(r"^\d+$", str(field))
-                else self.field_id(itemtype, field)
-            )
+        def field_id(itemtype: str, field: str) -> int:
+            if re.match(r"^\d+$", str(field)):
+                return int(field)
+            return self.field_id(itemtype, field)
+            # return (
+            #     int(field)
+            #     if re.match(r"^\d+$", str(field))
+            #     else self.field_id(itemtype, field)
+            # )
 
         # Format 'criteria' and 'metacriteria' parameters.
         kwargs.update(
@@ -682,16 +754,20 @@ class GLPI:
             }
         )
 
-        response = self.session.get(self._set_method("search", itemtype), params=kwargs)
+        response: requests.Response = self.session.get(
+            self._set_method("search", itemtype), params=kwargs
+        )
         return {
             200: lambda r: r.json().get("data", []),
             206: lambda r: r.json().get("data", []),
             400: _glpi_error,
             401: _glpi_error,
-        }.get(response.status_code, _unknown_error)(response)
+        }.get(response.status_code, _unknown_error)(response) or []
 
     @_catch_errors
-    def add(self, itemtype, *items):
+    def add(
+        self, itemtype: str, *items: typing.Dict
+    ) -> typing.Union[typing.List[typing.Dict], typing.Dict]:
         """`API documentation <https://github.com
         /glpi-project/glpi/blob/master/apirest.md#add-items>`__
 
@@ -710,15 +786,25 @@ class GLPI:
             items,
         )
         response = self.session.post(self._set_method(itemtype), json={"input": items})
-        return {
-            201: lambda r: r.json(),
-            207: lambda r: r.json()[1],
-            400: _glpi_error,
-            401: _glpi_error,
-        }.get(response.status_code, _unknown_error)(response)
+        if response.status_code == 201:
+            return response.json()
+        if response.status_code == 207:
+            return response.json()[1]
+        if response.status_code in [400, 401]:
+            _glpi_error(response)
+        _unknown_error(response)
+        return list()
+        # return {
+        #     201: lambda r: r.json(),
+        #     207: lambda r: r.json()[1],
+        #     400: _glpi_error,
+        #     401: _glpi_error,
+        # }.get(response.status_code, _unknown_error)(response)
 
     @_catch_errors
-    def update(self, itemtype, *items):
+    def update(
+        self, itemtype: str, *items: typing.Dict
+    ) -> typing.Union[typing.List[typing.Dict], typing.Dict]:
         """`API documentation
         <https://github.com/glpi-project/glpi/blob/master/apirest.md#update-items>`__
 
@@ -734,15 +820,25 @@ class GLPI:
             [{'5': True, 'message': ''}, {'6': True, 'message': ''}]
         """
         response = self.session.put(self._set_method(itemtype), json={"input": items})
-        return {
-            200: lambda r: r.json(),
-            207: lambda r: r.json()[1],
-            400: _glpi_error,
-            401: _glpi_error,
-        }.get(response.status_code, _unknown_error)(response)
+        if response.status_code == 200:
+            return response.json()
+        if response.status_code == 207:
+            return response.json()[1]
+        if response.status_code in [400, 401]:
+            _glpi_error(response)
+        _unknown_error(response)
+        return list()
+        # return {
+        #     200: lambda r: r.json(),
+        #     207: lambda r: r.json()[1],
+        #     400: _glpi_error,
+        #     401: _glpi_error,
+        # }.get(response.status_code, _unknown_error)(response)
 
     @_catch_errors
-    def delete(self, itemtype, *items, **kwargs):
+    def delete(
+        self, itemtype: str, *items: typing.Dict, **kwargs: typing.Any
+    ) -> typing.List[typing.Dict]:
         """`API documentation <https://github.com
         /glpi-project/glpi/blob/master/apirest.md#delete-items>`__
 
@@ -765,18 +861,30 @@ class GLPI:
             params=_convert_bools(kwargs),
             json={"input": items},
         )
-        return {
-            200: lambda r: r.json(),
-            204: lambda r: r.json(),
-            207: lambda r: r.json()[1],
-            400: lambda r: _glpi_error(r)
-            if r.json()[0] != "ERROR_GLPI_DELETE"
-            else r.json()[1],
-            401: _glpi_error,
-        }.get(response.status_code, _unknown_error)(response)
+        if response.status_code in [200, 204]:
+            return response.json()
+        if response.status_code == 207:
+            return response.json()[1]
+        if response.status_code == 400:
+            if response.json()[0] == "ERROR_GLPI_DELETE":
+                return response.json()[1]
+            _glpi_error(response)
+        if response.status_code == 401:
+            _glpi_error(response)
+        _unknown_error(response)
+        return list()
+        # return {
+        #     200: lambda r: r.json(),
+        #     204: lambda r: r.json(),
+        #     207: lambda r: r.json()[1],
+        #     400: lambda r: _glpi_error(r)
+        #     if r.json()[0] != "ERROR_GLPI_DELETE"
+        #     else r.json()[1],
+        #     401: _glpi_error,
+        # }.get(response.status_code, _unknown_error)(response)
 
     @_catch_errors
-    def upload_document(self, name, filepath):
+    def upload_document(self, name: str, filepath: str) -> typing.Dict:
         """`API documentation
         <https://github.com/glpi-project/glpi/blob/master/apirest.md#upload-a-document-file>`__
 
@@ -795,7 +903,7 @@ class GLPI:
         be deleted for some reasons) and purge the created but incomplete document.
         """
         with open(filepath, "rb") as fhandler:
-            response = requests.post(
+            response: requests.Response = requests.post(
                 url=self._set_method("Document"),
                 headers={
                     "Session-Token": self.session.headers["Session-Token"],
@@ -819,17 +927,19 @@ class GLPI:
         doc_id = response.json()["id"]
         error = response.json()["upload_result"]["filename"][0].get("error", None)
         if error is not None:
-            warnings.warn(_WARN_DEL_DOC.format(doc_id), UserWarning)
+            logging.warning(_WARN_DEL_DOC.format(doc_id))
             try:
                 self.delete("Document", {"id": doc_id}, force_purge=True)
             except GLPIError as err:
-                warnings.warn(_WARN_DEL_ERR.format(doc_id, str(err)), UserWarning)
+                logging.warning(_WARN_DEL_ERR.format(doc_id, str(err)))
             raise GLPIError("(ERROR_GLPI_INVALID_DOCUMENT) {:s}".format(error))
 
         return response.json()
 
     @_catch_errors
-    def download_document(self, doc_id, dirpath, filename=None):
+    def download_document(
+        self, doc_id: int, dirpath: str, filename: typing.Optional[str] = None
+    ) -> str:
         """`API documentation
         <https://github.com/glpi-project/glpi/blob/master/apirest.md#download-a-document-file>`__
 

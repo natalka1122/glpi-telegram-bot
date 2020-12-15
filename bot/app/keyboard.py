@@ -21,6 +21,8 @@ for value in URGENCY:
 
 
 def select_approve_refuse(ticket_id: int) -> aiogram.types.InlineKeyboardMarkup:
+    """ Keyboard to approve or refuse ticket with ticket_id label """
+
     approve_solution = InlineKeyboardButton(
         "Подтвердить решение", callback_data=f"approve_solution:{ticket_id}"
     )
@@ -31,6 +33,7 @@ def select_approve_refuse(ticket_id: int) -> aiogram.types.InlineKeyboardMarkup:
 
 
 def select_repeat_ticket(ticket_id: int) -> aiogram.types.InlineKeyboardMarkup:
+    """ Keyboard to repeat ticket with ticket_id label """
     repeat_ticket = InlineKeyboardButton(
         "Повторить заявку", callback_data=f"repeat_ticket:{ticket_id}"
     )

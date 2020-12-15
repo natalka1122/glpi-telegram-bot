@@ -51,7 +51,7 @@ class UserSession:
         dbhelper: typing.Optional[DBHelper] = None,
         login: typing.Optional[str] = None,
         password: typing.Optional[str] = None,
-    ):
+    ) -> None:
         """Async replacement for __init__"""
         if state is None:
             if dbhelper is None:
@@ -166,7 +166,7 @@ class UserSession:
             + f" state = _{self.state}_"
         )
 
-    async def destroy(self, state: FSMContext = None):
+    async def destroy(self, state: FSMContext = None) -> None:
         """Destroy all user data and state
 
         Args:
@@ -183,10 +183,12 @@ class UserSession:
         else:
             raise StupidError(f"Program error: self.state={self.state} state={state}")
 
-    def check_cred(self):
+    def check_cred(self) -> typing.Optional[int]:
         """
         Raise error if no login with provided credentials
         """
+        if self.login is None or self.password is None:
+            raise glpi_api.GLPIError
         with glpi_api.connect(
             url=self.URL,
             auth=(self.login, self.password),
@@ -235,8 +237,8 @@ class UserSession:
         """
         Return all tickets
         """
-        if not self.is_logged_in:
-            return {}
+        if self.login is None or self.password is None or not self.is_logged_in:
+            raise glpi_api.GLPIError
         # TODO error catch
         criteria = [
             {
@@ -277,10 +279,12 @@ class UserSession:
                     }
         return result
 
-    def get_one_ticket(self, ticket_id: int):
+    def get_one_ticket(self, ticket_id: int) -> typing.Dict:
         """
         Return one ticket with ticket_id
         """
+        if self.login is None or self.password is None or not self.is_logged_in:
+            raise glpi_api.GLPIError
         with glpi_api.connect(
             url=self.URL,
             auth=(self.login, self.password),
@@ -297,6 +301,8 @@ class UserSession:
         """
         Return last proposed solution for ticket with ticket_id
         """
+        if self.login is None or self.password is None or not self.is_logged_in:
+            raise glpi_api.GLPIError
         with glpi_api.connect(
             url=self.URL,
             auth=(self.login, self.password),
@@ -312,10 +318,12 @@ class UserSession:
                 html2text.html2text(str(solution[-1].get("content")))
             )
 
-    def create_ticket(self, title, description, urgency):
+    def create_ticket(self, title: str, description: str, urgency: int) -> int:
         """
         Create one ticket with specified title
         """
+        if self.login is None or self.password is None or not self.is_logged_in:
+            raise glpi_api.GLPIError
         try:
             with glpi_api.connect(
                 url=self.URL,
@@ -334,8 +342,10 @@ class UserSession:
 
         raise StupidError("Failed to add ticket: {}".format(result))
 
-    def approve_ticket_solution(self, ticket_id: int):
+    def approve_ticket_solution(self, ticket_id: int) -> None:
         """ Close ticket """
+        if self.login is None or self.password is None or not self.is_logged_in:
+            raise glpi_api.GLPIError
         with glpi_api.connect(
             url=self.URL,
             auth=(self.login, self.password),
@@ -356,8 +366,12 @@ class UserSession:
             )
             logging.info("result = %s", result)
 
-    def refuse_ticket_solition(self, ticket_id: int, text: str):
+    def refuse_ticket_solition(
+        self, ticket_id: int, text: str
+    ) -> typing.List[typing.Dict]:
         """ Add followup and reopen ticket """
+        if self.login is None or self.password is None or not self.is_logged_in:
+            raise glpi_api.GLPIError
         with glpi_api.connect(
             url=self.URL,
             auth=(self.login, self.password),

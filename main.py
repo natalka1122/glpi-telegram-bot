@@ -27,7 +27,13 @@ from bot.app.bot_state import Form
 )
 async def process_callback_approve_solution(
     callback_query: types.CallbackQuery, state: FSMContext
-):
+) -> None:
+    """Approves proposed solution
+
+    Args:
+        callback_query (types.CallbackQuery):
+        state (FSMContext):
+    """
     # logging.info(
     #     "type(callback_query) = %s callback_query.id = %s callback_query.from_user.id = %s",
     #     type(callback_query),
@@ -35,15 +41,13 @@ async def process_callback_approve_solution(
     #     callback_query.from_user.id,
     # )
     logging.info("callback_query = %s", callback_query)
-    callback_id: str = callback_query.id
-    message_id: int = callback_query.message.message_id
-    message_text: str = callback_query.message.text
-    user_id: int = callback_query.from_user.id
-    ticket_id: int = int(callback_query.data.split(":")[1])
-    logging.info("user_id = %s ticket_id = %s", user_id, ticket_id)
-    await generic.approve_solution(
-        user_id, ticket_id, message_id, message_text, callback_id, state
-    )
+    # callback_id: str = callback_query.id
+    # message_id: int = callback_query.message.message_id
+    # message_text: str = callback_query.message.text
+    # user_id: int = callback_query.from_user.id
+    # ticket_id: int = int(callback_query.data.split(":")[1])
+    # logging.info("user_id = %s ticket_id = %s", user_id, ticket_id)
+    await generic.approve_solution(callback_query, state)
 
 
 @dp.callback_query_handler(
@@ -53,7 +57,13 @@ async def process_callback_approve_solution(
 )
 async def process_callback_refuse_solution(
     callback_query: types.CallbackQuery, state: FSMContext
-):
+) -> None:
+    """Reacts of refusal of ticket solution
+
+    Args:
+        callback_query (types.CallbackQuery):
+        state (FSMContext):
+    """
     logging.info(
         "type(callback_query) = %s callback_query.id = %s callback_query.from_user.id = %s",
         type(callback_query),
@@ -61,14 +71,14 @@ async def process_callback_refuse_solution(
         callback_query.from_user.id,
     )
     logging.info("callback_query = %s", callback_query)
-    callback_id: str = callback_query.id
-    user_id: int = callback_query.from_user.id
-    ticket_id: int = int(callback_query.data.split(":")[1])
-    message_id: int = callback_query.message.message_id
-    message_text: str = callback_query.message.text
-    logging.info("user_id = %s ticket_id = %s", user_id, ticket_id)
+    # callback_id: str = callback_query.id
+    # user_id: int = callback_query.from_user.id
+    # ticket_id: int = int(callback_query.data.split(":")[1])
+    # message_id: int = callback_query.message.message_id
+    # message_text: str = callback_query.message.text
+    # logging.info("user_id = %s ticket_id = %s", user_id, ticket_id)
     await generic.refuse_solution(
-        user_id, ticket_id, message_id, message_text, callback_id, state
+        callback_query, state
     )
 
 
@@ -79,7 +89,13 @@ async def process_callback_refuse_solution(
 )
 async def process_callback_refuse_solution_wrong_state(
     callback_query: types.CallbackQuery, state: FSMContext
-):
+) -> None:
+    """Reacts of refusal of ticket solution in a wrong state
+
+    Args:
+        callback_query (types.CallbackQuery):
+        state (FSMContext)
+    """
     logging.info(
         "type(callback_query) = %s callback_query.id = %s callback_query.from_user.id = %s",
         type(callback_query),
@@ -107,7 +123,13 @@ async def process_callback_refuse_solution_wrong_state(
 )
 async def process_callback_repeat_ticket(
     callback_query: types.CallbackQuery, state: FSMContext
-):
+) -> None:
+    """Duplicate specified ticket
+
+    Args:
+        callback_query (types.CallbackQuery):
+        state (FSMContext):
+    """
     logging.info(
         "type(callback_query) = %s callback_query.id = %s callback_query.from_user.id = %s",
         type(callback_query),
@@ -115,11 +137,11 @@ async def process_callback_repeat_ticket(
         callback_query.from_user.id,
     )
     logging.info("callback_query = %s", callback_query)
-    callback_id: str = callback_query.id
-    user_id: int = callback_query.from_user.id
-    ticket_id: int = int(callback_query.data.split(":")[1])
-    logging.info("user_id = %s ticket_id = %s", user_id, ticket_id)
-    await generic.repeat_ticket(user_id, ticket_id, callback_id, state)
+    # callback_id: str = callback_query.id
+    # user_id: int = callback_query.from_user.id
+    # ticket_id: int = int(callback_query.data.split(":")[1])
+    # logging.info("user_id = %s ticket_id = %s", user_id, ticket_id)
+    await generic.repeat_ticket(callback_query, state)
 
 
 @dp.message_handler(commands=["start"], state="*")
@@ -307,7 +329,7 @@ async def non_text_message(message: types.Message, state: FSMContext) -> None:
     await generic.text_message(user_id)
 
 
-async def on_startup(disp: dispatcher.Dispatcher):
+async def on_startup(disp: dispatcher.Dispatcher) -> None:
     """ Create scheduler to regularly check tickets """
     asyncio.create_task(checker.scheduler(dbhelper=disp.storage))
 

@@ -3,6 +3,7 @@
 import logging
 
 import typing
+from aiogram import types
 from aiogram.dispatcher import FSMContext
 from bot.app import keyboard
 
@@ -18,7 +19,7 @@ from bot.app.quote_generator import get_quote
 import bot.glpi_api as glpi_api
 
 
-async def start_message(user_id: int, state: FSMContext):
+async def start_message(user_id: int, state: FSMContext) -> None:
     """/start command handler
 
     Args:
@@ -70,7 +71,7 @@ async def logout(user_id: int, state: FSMContext) -> None:
     )
 
 
-async def list_all_tickets(user_id: int, state: FSMContext):
+async def list_all_tickets(user_id: int, state: FSMContext) -> None:
     """/list command handler
 
     Args:
@@ -231,13 +232,15 @@ async def not_implemented(user_id: int) -> None:
 
 
 async def approve_solution(
-    user_id: int,
-    ticket_id: int,
-    message_id: int,
-    message_text: str,
-    callback_id: str,
+    callback_query: types.CallbackQuery,
     state: FSMContext,
-):
+) -> None:
+    """ Approve solution """
+    callback_id: str = callback_query.id
+    message_id: int = callback_query.message.message_id
+    message_text: str = callback_query.message.text
+    user_id: int = callback_query.from_user.id
+    ticket_id: int = int(callback_query.data.split(":")[1])
     user_session = UserSession(user_id)
     await user_session.create(state)
     user_session.approve_ticket_solution(ticket_id)
@@ -254,11 +257,14 @@ async def approve_solution(
 
 
 async def repeat_ticket(
-    user_id: int,
-    ticket_id: int,
-    callback_id: str,
+    callback_query: types.CallbackQuery,
     state: FSMContext,
-):
+) -> None:
+    """ Duplicate ticket """
+    callback_id: str = callback_query.id
+    user_id: int = callback_query.from_user.id
+    ticket_id: int = int(callback_query.data.split(":")[1])
+
     user_session = UserSession(user_id)
     await user_session.create(state)
     ticket: typing.Dict = user_session.get_one_ticket(ticket_id)
@@ -280,20 +286,15 @@ async def repeat_ticket(
 
 
 async def refuse_solution(
-    user_id: int,
-    ticket_id: int,
-    message_id: int,
-    message_text: str,
-    callback_id: str,
+    callback_query: types.CallbackQuery,
     state: FSMContext,
-):
-    await bot.edit_message_text(
-        message_text,
-        chat_id=user_id,
-        message_id=message_id,
-        reply_markup=None,
-    )
-
+) -> None:
+    """ Start a process of refusal """
+    callback_id: str = callback_query.id
+    user_id: int = callback_query.from_user.id
+    ticket_id: int = int(callback_query.data.split(":")[1])
+    message_id: int = callback_query.message.message_id
+    message_text: str = callback_query.message.text
     user_session = UserSession(user_id)
     await user_session.create(state)
     await user_session.add_field("ticket_id", str(ticket_id))
@@ -304,9 +305,18 @@ async def refuse_solution(
     )
     ddd = await bot.answer_callback_query(callback_id)
     logging.info("callback done %s", ddd)
+    await bot.edit_message_text(
+        message_text,
+        chat_id=user_id,
+        message_id=message_id,
+        reply_markup=None,
+    )
 
 
-async def process_to_explain_decline(user_id: int, text: str, state: FSMContext):
+async def process_to_explain_decline(
+    user_id: int, text: str, state: FSMContext
+) -> None:
+    """ Process declitation explain and decline ticket """
     user_session = UserSession(user_id)
     await user_session.create(state)
     ticket_id: int = int(await user_session.pop_field(key="ticket_id"))
@@ -316,7 +326,8 @@ async def process_to_explain_decline(user_id: int, text: str, state: FSMContext)
     await bot.send_message(user_id, "Принято", reply_markup=no_keyboard)
 
 
-async def refuse_solution_wrong_state(callback_id: str):
+async def refuse_solution_wrong_state(callback_id: str) -> None:
+    """ Do not start a process of refusal """
     ddd = await bot.answer_callback_query(
         callback_id,
         text="Завершите текущие дела, и нажмите кнопку еще раз",
@@ -326,7 +337,7 @@ async def refuse_solution_wrong_state(callback_id: str):
 
 
 # UNKNOWN ==================================================================
-async def text_message(user_id):
+async def text_message(user_id: int) -> None:
     """React on something it cannot understand
 
     Args:

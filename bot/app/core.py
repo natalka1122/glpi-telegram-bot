@@ -18,7 +18,7 @@ class Bot(aiogram.Bot):
     Base bot class with careful send_message function
     """
 
-    async def send_message(
+    async def send_message(  # pylint: disable=too-many-arguments
         self,
         chat_id: typing.Union[base.Integer, base.String],
         text: base.String,
@@ -34,11 +34,10 @@ class Bot(aiogram.Bot):
             None,
         ] = None,
     ) -> types.Message:
-        logging.info("type(text) = %s text = %s", type(text), text)
-        messages: typing.List[str] = []
-        if len(text) < MAX_MESSAGE_LENGTH:
-            messages.append(text)
-        else:
+        def split_me(text: str) -> typing.List[str]:
+            if len(text) < MAX_MESSAGE_LENGTH:
+                return [text]
+            messages: typing.List[str] = []
             buffer: str = ""
             for line in text.split("\n"):
                 line = str.strip(line)
@@ -68,6 +67,10 @@ class Bot(aiogram.Bot):
 
             if len(buffer) > 0:
                 messages.append(buffer)
+            return messages
+
+        logging.info("type(text) = %s text = %s", type(text), text)
+        messages = split_me(text)
         if len(messages) == 0:
             return
         for message in messages[:-1]:

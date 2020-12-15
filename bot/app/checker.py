@@ -18,7 +18,7 @@ def check_diff(
     old_ticket_dict: typing.Dict[int, typing.Dict],
     new_ticket_dict: typing.Dict[int, typing.Dict],
     user_session: UserSession,
-):
+) -> typing.Tuple[typing.Tuple[typing.Dict, typing.Dict, typing.Dict], bool]:
     """ Read old data, compare it with the new data, rewrite new data, return diff """
     logging.info("len(old_ticket_dict) = %s", len(old_ticket_dict))
     logging.info("len(new_ticket_dict) = %s", len(new_ticket_dict))
@@ -59,7 +59,10 @@ def check_diff(
                 date_mod: str = str(new_ticket_dict[ticket_id].get("date_mod", None))
                 # messages[ticket_id] = f"Status: old = {old_status} new = {new_status}"
                 if new_status == 1:  # Новый
-                    pass  # Do nothing
+                    messages[ticket_id] = (
+                        f"Ваша заявка с номером {ticket_id} {name} пересоздана."
+                        + f" Дата и время назначения: {date_mod}"
+                    )
                 elif new_status == 2:  # В работе (назначена)
                     messages[ticket_id] = (
                         f"Ваша заявка с номером {ticket_id} {name} назначена."
@@ -84,7 +87,7 @@ def check_diff(
                     proposed_solutions[ticket_id] = messages[ticket_id]
                     # TODO Add buttons
                 elif new_status == 6:  # Закрыто
-                    messages[ticket_id] = "TODO add button"
+                    messages[ticket_id] = ""
                     closed_tickets[ticket_id] = messages[ticket_id]
                     # TODO Add button
                 else:
@@ -136,7 +139,12 @@ def check_diff(
 #     # )
 
 
-async def process_messages(user_id, messages, proposed_solutions, closed_tickets):
+async def process_messages(
+    user_id: int,
+    messages: typing.Dict,
+    proposed_solutions: typing.Dict,
+    closed_tickets: typing.Dict,
+) -> None:
     """Sends messages about changed tickets to user
 
     Args:
@@ -185,7 +193,7 @@ async def process_messages(user_id, messages, proposed_solutions, closed_tickets
         await bot.send_message(user_id, f"{messages[ticket_id]}")
 
 
-async def run_check(dbhelper: DBHelper):
+async def run_check(dbhelper: DBHelper) -> None:
     """Check for every user if it has updates"""
     # TODO add error catch
     for user_id in dbhelper.all_user():
@@ -225,7 +233,7 @@ async def run_check(dbhelper: DBHelper):
         #     await bot.send_message(user_id, f"{messages[ticket_id]}")
 
 
-async def scheduler(dbhelper: DBHelper):
+async def scheduler(dbhelper: DBHelper) -> None:
     """ Main scheduler for regilar ticket check """
     aioschedule.every(config.CHECK_PERIOD).seconds.do(run_check, dbhelper=dbhelper)
     while True:
