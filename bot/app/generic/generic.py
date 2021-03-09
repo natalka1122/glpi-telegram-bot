@@ -10,7 +10,7 @@ from bot.app import keyboard
 from bot.app.core import bot
 from bot.app.generic import onboarding
 
-from bot.app.keyboard import no_keyboard, select_urgent_keyboard
+from bot.app.keyboard import no_keyboard, select_urgent_keyboard, select_cancel_create
 from bot.app.bot_state import Form
 
 from bot.app.ticket import show_ticket, urgency_to_int
@@ -72,6 +72,17 @@ async def logout(user_id: int, state: FSMContext) -> None:
     )
 
 
+async def cancel(user_id: int) -> None:
+    """/cancel command handler
+
+    Args:
+        user_id (int): telegram user id that issued /cancel command
+        state (FSMContext): state for specific user
+    """
+    await Form.logged_in.set()
+    await bot.send_message(user_id, "И снова здравствуйте!")
+
+
 async def list_all_tickets(user_id: int, state: FSMContext) -> None:
     """/list command handler
 
@@ -95,9 +106,12 @@ async def list_all_tickets(user_id: int, state: FSMContext) -> None:
         )
         await bot.send_message(user_id, "Список заявок пуст", reply_markup=no_keyboard)
         return
-
-    for _, current_ticket in enumerate(list_tickets):
+    logging.info("list_tickets = %s", list_tickets)
+    logging.info("list_tickets = %s", list(enumerate(list_tickets)))
+    for ticket_id in list_tickets:
+        current_ticket = list_tickets[ticket_id]
         try:
+            logging.info("current_ticket = %s", current_ticket)
             await bot.send_message(
                 chat_id=user_id,
                 # text=show_ticket(user_session.get_one_ticket(current_ticket)),
@@ -122,7 +136,7 @@ async def add_new_ticket(user_id: int) -> None:
 
     await Form.to_enter_title.set()
     await bot.send_message(
-        user_id, "Введите заголовок заявки", reply_markup=no_keyboard
+        user_id, "Введите заголовок заявки", reply_markup=select_cancel_create
     )
 
 
@@ -141,7 +155,7 @@ async def process_to_enter_title(user_id: int, title: str, state: FSMContext) ->
     await bot.send_message(
         user_id,
         f'Тема вашей заявки "{title}". Введите описание возникшей проблемы',
-        reply_markup=no_keyboard,
+        reply_markup=select_cancel_create,
     )
 
 

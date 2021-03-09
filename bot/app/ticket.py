@@ -5,6 +5,8 @@ import typing
 import html2text
 import html2markdown
 
+from config import GLPI_TICKET_URL
+
 MAX_MESSAGE_LENGTH = 2000
 UNKNOWN = "Мама, это какое-то неизвестное науке число"
 STATUS = {
@@ -21,6 +23,7 @@ URGENCY = {
     2: "Низкий",
     3: "Средний",
     # 5: "Очень высокая",
+    -1: "/cancel",
 }
 
 
@@ -74,10 +77,12 @@ def show_ticket(
     ticket: typing.Dict,
 ) -> str:
     """ Show ticket for user """
-    logging.info(ticket)
-    content = html2markdown.convert(html2text.html2text(str(ticket["content"])))
+    logging.info("ticket = %s", ticket)
+    content = html2markdown.convert(
+        html2text.html2text(str(ticket["content"])))
     result: typing.List = []
-    result.append("Заявка с номером {} '{}'".format(ticket["id"], ticket["name"]))
+    result.append(f"Заявка с номером <a href=\"{GLPI_TICKET_URL}{ticket['id']}\">{ticket['id']} '{ticket['name']}'</a>")
+    #.format(ticket["id"], ticket["name"]))
     result.append("Статус: {}".format(int_to_status(ticket["status"])))
     result.append("Срочность: {}".format(int_to_urgency(ticket["urgency"])))
     result.append("Дата открытия: {}".format(ticket["date"]))

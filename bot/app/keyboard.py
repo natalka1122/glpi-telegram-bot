@@ -1,7 +1,6 @@
 """
 Different keyboards
 """
-import aiogram
 from aiogram.types import (
     ReplyKeyboardRemove,
     ReplyKeyboardMarkup,
@@ -19,10 +18,13 @@ select_urgent_keyboard = ReplyKeyboardMarkup(
 for value in URGENCY:
     select_urgent_keyboard.insert(URGENCY[value])
 
+select_cancel_create = ReplyKeyboardMarkup(
+    resize_keyboard=True, one_time_keyboard=True
+)
+select_cancel_create.insert("/cancel")
 
-def select_approve_refuse(ticket_id: int) -> aiogram.types.InlineKeyboardMarkup:
+def select_approve_refuse(ticket_id: int) -> InlineKeyboardMarkup:
     """ Keyboard to approve or refuse ticket with ticket_id label """
-
     approve_solution = InlineKeyboardButton(
         "Подтвердить решение", callback_data=f"approve_solution:{ticket_id}"
     )
@@ -32,7 +34,7 @@ def select_approve_refuse(ticket_id: int) -> aiogram.types.InlineKeyboardMarkup:
     return InlineKeyboardMarkup().add(approve_solution, refuse_solution)
 
 
-def select_repeat_ticket(ticket_id: int) -> aiogram.types.InlineKeyboardMarkup:
+def select_repeat_ticket(ticket_id: int) -> InlineKeyboardMarkup:
     """ Keyboard to repeat ticket with ticket_id label """
     repeat_ticket = InlineKeyboardButton(
         "Повторить заявку", callback_data=f"repeat_ticket:{ticket_id}"

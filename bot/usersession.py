@@ -150,7 +150,7 @@ class UserSession:
                 data[LOGGED_IN] = True
             flag_data_changed = True
         # if LOGGED_IN in data:
-        logging.info("data = %s", data)
+        # logging.info("data = %s", data)
         self.is_logged_in = data.get(LOGGED_IN, False)
         self.glpi_id = data.get(GLPI_ID, None)
         # if GLPI_ID in data:
@@ -357,7 +357,6 @@ class UserSession:
                     TICKET,
                     {"name": title, "content": description, "urgency": urgency},
                 )
-                logging.info(f"result = {result}")
                 if isinstance(result, list) and len(result) == 1 and "id" in result[0]:
                     return result[0]["id"]
                 raise StupidError("Failed to add ticket: {}".format(result))

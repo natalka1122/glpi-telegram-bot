@@ -149,17 +149,19 @@ async def start_message(message: types.Message, state: FSMContext) -> None:
     """Reacts on /start command in every state"""
     user_id: int = message.from_user.id
     current_state: typing.Union[str, None] = await state.get_state()
-    logging.info("User ID %d issued /start command. State: %s", user_id, current_state)
+    logging.info("User ID %d issued /start command. State: %s",
+                 user_id, current_state)
 
     await generic.start_message(user_id, state)
 
 
-@dp.message_handler(commands=["/help"], state="*")
+@dp.message_handler(commands=["help"], state="*")
 async def help_message(message: types.Message, state: FSMContext) -> None:
     """Reacts on /help command in every state"""
     user_id: int = message.from_user.id
     current_state: typing.Union[str, None] = await state.get_state()
-    logging.info("User ID %d issued /help command. State: %s", user_id, current_state)
+    logging.info("User ID %d issued /help command. State: %s",
+                 user_id, current_state)
 
     await generic.help_command(user_id)
 
@@ -169,7 +171,8 @@ async def logout_message(message: types.Message, state: FSMContext) -> None:
     """Reacts on /logout command in every state"""
     user_id: int = message.from_user.id
     current_state: typing.Optional[str] = await state.get_state()
-    logging.info("User ID %d issued /logout command. State: %s", user_id, current_state)
+    logging.info("User ID %d issued /logout command. State: %s",
+                 user_id, current_state)
 
     await generic.logout(user_id=user_id, state=state)
 
@@ -237,12 +240,43 @@ async def list_all_tickets(message: types.Message, state: FSMContext) -> None:
     await generic.list_all_tickets(user_id=user_id, state=state)
 
 
+@dp.message_handler(commands=["cancel"], state=Form.to_enter_title)
+async def cancel_message_1(message: types.Message, state: FSMContext) -> None:
+    """Reacts on /cancel command in every state"""
+    user_id: int = message.from_user.id
+    current_state: typing.Optional[str] = await state.get_state()
+    logging.info("User ID %d issued /cancel command. State: %s",
+                 user_id, current_state)
+
+    await generic.cancel(user_id=user_id)
+
+@dp.message_handler(commands=["cancel"], state=Form.to_enter_description)
+async def cancel_message_2(message: types.Message, state: FSMContext) -> None:
+    """Reacts on /cancel command in every state"""
+    user_id: int = message.from_user.id
+    current_state: typing.Optional[str] = await state.get_state()
+    logging.info("User ID %d issued /cancel command. State: %s",
+                 user_id, current_state)
+
+    await generic.cancel(user_id=user_id)
+
+@dp.message_handler(commands=["cancel"], state=Form.to_select_priority)
+async def cancel_message_3(message: types.Message, state: FSMContext) -> None:
+    """Reacts on /cancel command in every state"""
+    user_id: int = message.from_user.id
+    current_state: typing.Optional[str] = await state.get_state()
+    logging.info("User ID %d issued /cancel command. State: %s",
+                 user_id, current_state)
+
+    await generic.cancel(user_id=user_id)
+
 @dp.message_handler(commands=["add"], state=Form.logged_in)
 async def add_ticket(message: types.Message, state: FSMContext) -> None:
     """Reacts on /add command for logged user"""
     user_id: int = message.from_user.id
     current_state: typing.Optional[str] = await state.get_state()
-    logging.info("User ID %d issued /add command. State: %s", user_id, current_state)
+    logging.info("User ID %d issued /add command. State: %s",
+                 user_id, current_state)
 
     await generic.add_new_ticket(user_id=user_id)
 
@@ -338,7 +372,8 @@ if __name__ == "__main__":
     logging.info("GLPI Telegram bot is started")
     while True:
         try:
-            executor.start_polling(dp, skip_updates=True, on_startup=on_startup)
+            executor.start_polling(dp, skip_updates=True,
+                                   on_startup=on_startup)
         except NetworkError:
             logging.error("Network Error. Restarting...")
             continue
