@@ -1,6 +1,6 @@
 """Module for UserSession class"""
 import logging
-import typing
+from typing import Any, Dict, List, Optional, Union
 import html2text
 import html2markdown
 
@@ -15,6 +15,7 @@ PASSWORD = "password"
 LOGGED_IN = "logged_in"
 GLPI_ID = "glpi_id"
 TICKET = "ticket"
+USER = "user"
 SOLUTION = "itilsolution"
 TICKET_ID = "2"
 REQUEST_USER_ID = "4"
@@ -22,6 +23,7 @@ TICKET_STATUS = "12"
 TICKET_NAME = "1"
 TICKET_LAST_UPDATE = "19"
 CLOSED_TICKED_STATUS = "6"
+ASSIGNED_TO = "5"
 
 
 class StupidError(Exception):
@@ -39,18 +41,18 @@ class UserSession:
 
     def __init__(self, user_id: int) -> None:
         self.user_id: int = user_id
-        self.state: typing.Optional[FSMContext] = None
-        self.login: typing.Optional[str] = None
-        self.password: typing.Optional[str] = None
-        self.glpi_id: typing.Optional[int] = None
+        self.state: Optional[FSMContext] = None
+        self.login: Optional[str] = None
+        self.password: Optional[str] = None
+        self.glpi_id: Optional[int] = None
         self.is_logged_in: bool = False
 
     async def create(
         self,
-        state: typing.Optional[FSMContext] = None,
-        dbhelper: typing.Optional[DBHelper] = None,
-        login: typing.Optional[str] = None,
-        password: typing.Optional[str] = None,
+        state: Optional[FSMContext] = None,
+        dbhelper: Optional[DBHelper] = None,
+        login: Optional[str] = None,
+        password: Optional[str] = None,
     ) -> None:
         """Async replacement for __init__"""
         if state is None:
@@ -65,7 +67,7 @@ class UserSession:
             )
 
         self.state = state
-        data: typing.Dict = await self.state.get_data()
+        data: Dict = await self.state.get_data()
         if password is None:
             pwd_hidden: str = str(None)
         else:
@@ -183,20 +185,21 @@ class UserSession:
         else:
             raise StupidError(f"Program error: self.state={self.state} state={state}")
 
-    def check_cred(self) -> typing.Optional[int]:
+    def check_cred(self) -> Optional[int]:
         """
         Raise error if no login with provided credentials
         """
         if self.login is None or self.password is None:
             raise glpi_api.GLPIError
-        with glpi_api.connect(
+        with glpi_api.GLPI(
             url=self.URL,
             auth=(self.login, self.password),
             apptoken=config.GLPI_APP_API_KEY,
         ) as glpi:
-            result: typing.Dict[str, typing.Any] = glpi.get_full_session()
-        # logging.info("get_full_session = %s", result)
-        return result.get("glpiID", None)
+            result: Dict[str, Any] = glpi.get_full_session()
+            # logging.info("get_full_session = %s", result)
+            return result.get("glpiID", None)
+        raise glpi_api.GLPIError
 
     async def add_field(self, key: str, data: str) -> None:
         """Add datafield to user_id in database
@@ -231,9 +234,7 @@ class UserSession:
         await self.state.set_data(data)
         return result
 
-    def get_all_my_tickets(
-        self, open_only: bool, full_info: bool
-    ) -> typing.Dict[int, typing.Dict]:
+    def get_all_my_tickets(self, open_only: bool, full_info: bool) -> Dict[int, Dict]:
         """
         Return all tickets
         """
@@ -247,13 +248,13 @@ class UserSession:
                 "value": str(self.glpi_id),
             }
         ]
-        forcedisplay = [TICKET_NAME, TICKET_STATUS, TICKET_LAST_UPDATE]
-        with glpi_api.connect(
+        forcedisplay = [TICKET_NAME, TICKET_STATUS, TICKET_LAST_UPDATE, ASSIGNED_TO]
+        with glpi_api.GLPI(
             url=self.URL,
             auth=(self.login, self.password),
             apptoken=config.GLPI_APP_API_KEY,
         ) as glpi:
-            glpi_tickets: typing.List[typing.Dict[str, str]] = glpi.search(
+            glpi_tickets: List[Dict[str, Union[str, int, list, None]]] = glpi.search(
                 TICKET, criteria=criteria, forcedisplay=forcedisplay, sort=TICKET_ID
             )
             logging.info("self.login = %s", self.login)
@@ -264,12 +265,31 @@ class UserSession:
                 glpi_tickets = list(
                     filter(lambda x: x[TICKET_STATUS] != 6, glpi_tickets)
                 )
-            result: typing.Dict[int, typing.Dict] = {}
+            result: Dict[int, Dict] = {}
             if full_info:
                 for elem in glpi_tickets:
-                    result[int(elem[TICKET_ID])] = glpi.get_item(
-                        TICKET, item_id=int(elem[TICKET_ID]), get_hateoas=False
+                    ticket_id: int = int(elem[TICKET_ID])
+                    result[ticket_id] = glpi.get_item(
+                        TICKET, item_id=ticket_id, get_hateoas=False
                     )
+                    # assigned_user_id: List[int] = []
+                    # if isinstance(elem[ASSIGNED_TO], int):
+                    #     assigned_user_id = [elem[ASSIGNED_TO]]
+                    # elif isinstance(elem[ASSIGNED_TO], list):
+                    #     assigned_user_id = elem[ASSIGNED_TO]
+                    # elif elem[ASSIGNED_TO] is not None:
+                    #     raise StupidError(
+                    #         "elem[ASSIGNED_TO] = "
+                    #         + str(elem[ASSIGNED_TO])
+                    #         + " type = "
+                    #         + str(type(elem[ASSIGNED_TO]))
+                    #     )
+                    # assigned_user: List[str] = []
+                    # for user_id in assigned_user_id:
+                    #     assigned_user.append(
+                    #         glpi.get_item(USER, item_id=int(user_id), get_hateoas=False)
+                    #     )
+                    # result[ticket_id]["assigned_to"] = assigned_user
             else:
                 for elem in glpi_tickets:
                     result[int(elem[TICKET_ID])] = {
@@ -277,25 +297,27 @@ class UserSession:
                         "name": elem[TICKET_NAME],
                         "date_mod": elem[TICKET_LAST_UPDATE],
                     }
-        return result
+            return result
+        raise glpi_api.GLPIError
 
-    def get_one_ticket(self, ticket_id: int) -> typing.Dict:
+    def get_one_ticket(self, ticket_id: int) -> Dict:
         """
         Return one ticket with ticket_id
         """
         if self.login is None or self.password is None or not self.is_logged_in:
             raise glpi_api.GLPIError
-        with glpi_api.connect(
+        with glpi_api.GLPI(
             url=self.URL,
             auth=(self.login, self.password),
             apptoken=config.GLPI_APP_API_KEY,
         ) as glpi:
             result = glpi.get_item(TICKET, item_id=ticket_id, get_hateoas=False)
-        if "content" in result:
-            result["content"] = html2markdown.convert(
-                html2text.html2text(str(result["content"]))
-            )
-        return result
+            if "content" in result:
+                result["content"] = html2markdown.convert(
+                    html2text.html2text(str(result["content"]))
+                )
+            return result
+        raise glpi_api.GLPIError
 
     def get_last_solution(self, ticket_id: int) -> str:
         """
@@ -303,12 +325,12 @@ class UserSession:
         """
         if self.login is None or self.password is None or not self.is_logged_in:
             raise glpi_api.GLPIError
-        with glpi_api.connect(
+        with glpi_api.GLPI(
             url=self.URL,
             auth=(self.login, self.password),
             apptoken=config.GLPI_APP_API_KEY,
         ) as glpi:
-            solution: typing.Dict = glpi.get_sub_items(
+            solution: Dict = glpi.get_sub_items(
                 TICKET, ticket_id, SOLUTION, get_hateoas=False
             )
             logging.info("solution = %s", solution)
@@ -317,6 +339,7 @@ class UserSession:
             return html2markdown.convert(
                 html2text.html2text(str(solution[-1].get("content")))
             )
+        raise glpi_api.GLPIError
 
     def create_ticket(self, title: str, description: str, urgency: int) -> int:
         """
@@ -325,7 +348,7 @@ class UserSession:
         if self.login is None or self.password is None or not self.is_logged_in:
             raise glpi_api.GLPIError
         try:
-            with glpi_api.connect(
+            with glpi_api.GLPI(
                 url=self.URL,
                 auth=(self.login, self.password),
                 apptoken=config.GLPI_APP_API_KEY,
@@ -334,19 +357,20 @@ class UserSession:
                     TICKET,
                     {"name": title, "content": description, "urgency": urgency},
                 )
+                logging.info(f"result = {result}")
+                if isinstance(result, list) and len(result) == 1 and "id" in result[0]:
+                    return result[0]["id"]
+                raise StupidError("Failed to add ticket: {}".format(result))
         except glpi_api.GLPIError as err:
             raise StupidError("Failed to add ticket: {}".format(err)) from err
+        raise glpi_api.GLPIError
         # [{'id': 1309, 'message': 'Объект успешно добавлен: dds'}]
-        if isinstance(result, list) and len(result) == 1 and "id" in result[0]:
-            return result[0]["id"]
-
-        raise StupidError("Failed to add ticket: {}".format(result))
 
     def approve_ticket_solution(self, ticket_id: int) -> None:
         """ Close ticket """
         if self.login is None or self.password is None or not self.is_logged_in:
             raise glpi_api.GLPIError
-        with glpi_api.connect(
+        with glpi_api.GLPI(
             url=self.URL,
             auth=(self.login, self.password),
             apptoken=config.GLPI_APP_API_KEY,
@@ -366,13 +390,11 @@ class UserSession:
             )
             logging.info("result = %s", result)
 
-    def refuse_ticket_solition(
-        self, ticket_id: int, text: str
-    ) -> typing.List[typing.Dict]:
+    def refuse_ticket_solition(self, ticket_id: int, text: str) -> List[Dict]:
         """ Add followup and reopen ticket """
         if self.login is None or self.password is None or not self.is_logged_in:
             raise glpi_api.GLPIError
-        with glpi_api.connect(
+        with glpi_api.GLPI(
             url=self.URL,
             auth=(self.login, self.password),
             apptoken=config.GLPI_APP_API_KEY,
@@ -387,3 +409,4 @@ class UserSession:
                     "add_reopen": 1,
                 },
             )
+        raise glpi_api.GLPIError

@@ -2,7 +2,7 @@
 """
 import logging
 
-import typing
+from typing import Dict
 from aiogram import types
 from aiogram.dispatcher import FSMContext
 from bot.app import keyboard
@@ -17,6 +17,7 @@ from bot.app.ticket import show_ticket, urgency_to_int
 from bot.usersession import StupidError, UserSession
 from bot.app.quote_generator import get_quote
 import bot.glpi_api as glpi_api
+from config import GLPI_TICKET_URL
 
 
 async def start_message(user_id: int, state: FSMContext) -> None:
@@ -80,7 +81,7 @@ async def list_all_tickets(user_id: int, state: FSMContext) -> None:
     user_session = UserSession(user_id=user_id)
     await user_session.create(state=state)
     try:
-        list_tickets: typing.Dict[int, typing.Dict] = user_session.get_all_my_tickets(
+        list_tickets: Dict[int, Dict] = user_session.get_all_my_tickets(
             open_only=True, full_info=True
         )
     except glpi_api.GLPIError as err:
@@ -95,11 +96,12 @@ async def list_all_tickets(user_id: int, state: FSMContext) -> None:
         await bot.send_message(user_id, "Список заявок пуст", reply_markup=no_keyboard)
         return
 
-    for current_ticket in list_tickets:
+    for _, current_ticket in enumerate(list_tickets):
         try:
             await bot.send_message(
                 chat_id=user_id,
-                text=show_ticket(user_session.get_one_ticket(current_ticket)),
+                # text=show_ticket(user_session.get_one_ticket(current_ticket)),
+                text=show_ticket(current_ticket),
                 reply_markup=no_keyboard,
             )
         except glpi_api.GLPIError as err:
@@ -213,7 +215,8 @@ async def process_to_select_priority(
     except StupidError as err:
         message_text: str = f"Произошла неизвестная науке ошибка {err}"
     else:
-        message_text = f'Заявка "{title}" принята. Номер заявки - {ticket_id}'
+        # message_text = f'Заявка "{title}" принята. Номер заявки - [{ticket_id}]({GLPI_TICKET_URL}{ticket_id})'
+        message_text = f'Заявка "{title}" принята. Номер заявки - <a href="{GLPI_TICKET_URL}{ticket_id}">{ticket_id}</a>'
     logging.info(message_text)
     await bot.send_message(user_id, message_text, reply_markup=no_keyboard)
     await Form.logged_in.set()
@@ -267,7 +270,7 @@ async def repeat_ticket(
 
     user_session = UserSession(user_id)
     await user_session.create(state)
-    ticket: typing.Dict = user_session.get_one_ticket(ticket_id)
+    ticket: Dict = user_session.get_one_ticket(ticket_id)
     title: str = ticket.get("name", str(None))
     description: str = ticket.get("content", str(None))
     priority_int: int = ticket.get("priority", str(None))

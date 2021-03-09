@@ -229,10 +229,10 @@ class DBHelper(BaseStorage):
         user: typing.Union[str, int, None],
         state: typing.Optional[typing.AnyStr],
     ):
-        logging.debug("DBHelper set_state %s", state)
+        # logging.debug("DBHelper set_state %s", state)
         whole_data = self._get_whole_data(chat, user)
         whole_data[STATE] = state
-        logging.info("DBHelper set_state writes %s", whole_data)
+        # logging.info("DBHelper set_state writes %s", whole_data)
         self._set_whole_data(chat=chat, user=user, whole_data=whole_data)
 
     async def get_data(

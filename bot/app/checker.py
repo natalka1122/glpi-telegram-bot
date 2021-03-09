@@ -82,6 +82,7 @@ def check_diff(
                     solution: str = user_session.get_last_solution(ticket_id)
                     messages[ticket_id] = (
                         f"По Вашей заявке с номером {ticket_id} {name} предложено решение: {solution}."
+                        + "\n"
                         + f" Дата и время изменения: {date_mod}"
                     )
                     proposed_solutions[ticket_id] = messages[ticket_id]

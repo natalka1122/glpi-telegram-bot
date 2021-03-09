@@ -1,5 +1,6 @@
 """General ticket manipulations
 """
+import logging
 import typing
 import html2text
 import html2markdown
@@ -15,11 +16,11 @@ STATUS = {
     6: "Закрыто",
 }
 URGENCY = {
-    1: "Очень низкий",
+    # 1: "Очень низкий",
+    4: "Высокий",
     2: "Низкий",
     3: "Средний",
-    4: "Высокая",
-    5: "Очень высокая",
+    # 5: "Очень высокая",
 }
 
 
@@ -73,6 +74,7 @@ def show_ticket(
     ticket: typing.Dict,
 ) -> str:
     """ Show ticket for user """
+    logging.info(ticket)
     content = html2markdown.convert(html2text.html2text(str(ticket["content"])))
     result: typing.List = []
     result.append("Заявка с номером {} '{}'".format(ticket["id"], ticket["name"]))

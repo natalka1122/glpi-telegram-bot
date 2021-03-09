@@ -3,7 +3,9 @@
 
 import logging
 import os
+import re
 import sys
+import requests
 
 from dotenv import load_dotenv
 
@@ -26,9 +28,27 @@ if len(GLPI_BASE_URL) == 0:
         file=sys.stderr,
     )
     sys.exit(1)
+try:
+    r = requests.head(GLPI_BASE_URL)
+    if r.status_code != 200:
+        print(f"GLPI server {GLPI_BASE_URL} seems offline", file=sys.stderr)
+        sys.exit(1)
+except requests.ConnectionError:
+    print(f"GLPI server {GLPI_BASE_URL} seems offline", file=sys.stderr)
+    sys.exit(1)
+GLPI_TICKET_URL: str = os.getenv("GLPI_TICKET_URL", default="")
+if len(GLPI_TICKET_URL) == 0:
+    re_glpi_base = re.match(r"^(.*)\/\/(.*)\/apirest\.php(.*)$", GLPI_BASE_URL)
+    if re_glpi_base is None:
+        print(
+            "There is no GLPI_TICKET_URL url. Please provide GLPI_TICKET_URL in .env file or as environment variable",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    GLPI_TICKET_URL = f"{re_glpi_base.group(1)}//{re_glpi_base.group(2)}/front/ticket.form.php?id="
 GLPI_APP_API_KEY: str = os.getenv("GLPI_APP_API_KEY", default="")
 
-CHECK_PERIOD = int(os.getenv("CHECK_PERIOD", default="300"))
+CHECK_PERIOD = int(os.getenv("CHECK_PERIOD", default="30"))
 
 _data_dir: str = os.getenv("DATA_DIR", default="/data/")
 os.makedirs(_data_dir, exist_ok=True)

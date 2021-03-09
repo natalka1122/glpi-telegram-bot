@@ -108,16 +108,5 @@ logging.getLogger().setLevel(config.LOG_LEVEL)
 logging.getLogger().addHandler(handler_stdout)
 logging.getLogger().addHandler(handler_file)
 
-# TODO delete after 15.12.2020
-# logging.basicConfig(
-#     level=config.LOG_LEVEL,
-#     filename=config.LOG_FILENAME,
-#     format="%(asctime)s - %(message)s",
-#     datefmt="%d-%b-%y %H:%M:%S",
-#     filemode="a",
-# )
-# logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
-
-
-bot = Bot(token=config.TELEGRAM_TOKEN)
+bot = Bot(token=config.TELEGRAM_TOKEN,parse_mode="HTML")
 dp = aiogram.Dispatcher(bot, storage=dbhelper.DBHelper(config.DB_FILE))

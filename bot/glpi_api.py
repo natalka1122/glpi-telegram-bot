@@ -5,9 +5,11 @@ provided by the API and manage HTTP return codes.
 import os
 import re
 import logging
+import types
 import typing
 from base64 import b64encode
-from contextlib import contextmanager
+
+# from contextlib import contextmanager
 from functools import wraps
 
 import requests
@@ -37,39 +39,6 @@ class GLPIError(Exception):
     """Exception raised by this module."""
 
     # TODO Add error handling
-
-
-@contextmanager
-def connect(  # type: ignore
-    url: str,
-    apptoken: str,
-    auth: typing.Union[str, typing.Tuple[str, str]],
-    verify_certs: bool = True,
-):
-    """Context manager that authenticate to GLPI when enter and kill application
-    session in GLPI when leaving:
-
-    .. code::
-
-        >>> import glpi_api
-        >>>
-        >>> URL = 'https://glpi.exemple.com/apirest.php'
-        >>> APPTOKEN = 'YOURAPPTOKEN'
-        >>> USERTOKEN = 'YOURUSERTOKEN'
-        >>>
-        >>> try:
-        >>>     with glpi_api.connect(URL, APPTOKEN, USERTOKEN) as glpi:
-        >>>         print(glpi.get_config())
-        >>> except glpi_api.GLPIError as err:
-        >>>     print(str(err))
-
-    You can set ``verify_certs`` to *False* to ignore invalid SSL certificates.
-    """
-    glpi = GLPI(url, apptoken, auth, verify_certs)
-    try:
-        yield glpi
-    finally:
-        glpi.kill_session()
 
 
 def _raise(msg: str) -> None:
@@ -164,6 +133,25 @@ class GLPI:
 
         # Use for caching field id/uid map.
         self._fields: typing.Dict[str, typing.Dict] = {}
+
+    def __enter__(self) -> "GLPI":
+        logging.info("__enter__")
+        return self
+
+    def __exit__(
+        self,
+        exc_type: typing.Optional[typing.Type],
+        exc_value: typing.Optional[Exception],
+        traceback: typing.Optional[types.TracebackType],
+    ) -> bool:
+        logging.info(
+            "exc_type = %s exc_value = %s traceback = %s",
+            exc_type,
+            exc_value,
+            traceback,
+        )
+        self.kill_session()
+        return exc_type is None and exc_value is None and traceback is None
 
     def _set_method(
         self, *endpoints: typing.Union[str, int, typing.Tuple[typing.Any, ...]]
