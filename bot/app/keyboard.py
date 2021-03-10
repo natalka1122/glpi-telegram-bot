@@ -23,6 +23,12 @@ select_cancel_create = ReplyKeyboardMarkup(
 )
 select_cancel_create.insert("/cancel")
 
+select_command = ReplyKeyboardMarkup(
+    resize_keyboard=True, one_time_keyboard=True
+)
+select_command.insert("/tickets")
+select_command.insert("/add")
+
 def select_approve_refuse(ticket_id: int) -> InlineKeyboardMarkup:
     """ Keyboard to approve or refuse ticket with ticket_id label """
     approve_solution = InlineKeyboardButton(

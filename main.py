@@ -250,6 +250,7 @@ async def cancel_message_1(message: types.Message, state: FSMContext) -> None:
 
     await generic.cancel(user_id=user_id)
 
+
 @dp.message_handler(commands=["cancel"], state=Form.to_enter_description)
 async def cancel_message_2(message: types.Message, state: FSMContext) -> None:
     """Reacts on /cancel command in every state"""
@@ -260,6 +261,7 @@ async def cancel_message_2(message: types.Message, state: FSMContext) -> None:
 
     await generic.cancel(user_id=user_id)
 
+
 @dp.message_handler(commands=["cancel"], state=Form.to_select_priority)
 async def cancel_message_3(message: types.Message, state: FSMContext) -> None:
     """Reacts on /cancel command in every state"""
@@ -269,6 +271,18 @@ async def cancel_message_3(message: types.Message, state: FSMContext) -> None:
                  user_id, current_state)
 
     await generic.cancel(user_id=user_id)
+
+
+@dp.message_handler(commands=["cancel"], state=Form.to_explain_decline)
+async def cancel_message_4(message: types.Message, state: FSMContext) -> None:
+    """Reacts on /cancel command in every state"""
+    user_id: int = message.from_user.id
+    current_state: typing.Optional[str] = await state.get_state()
+    logging.info("User ID %d issued /cancel command. State: %s",
+                 user_id, current_state)
+
+    await generic.cancel(user_id=user_id)
+
 
 @dp.message_handler(commands=["add"], state=Form.logged_in)
 async def add_ticket(message: types.Message, state: FSMContext) -> None:
@@ -345,7 +359,7 @@ async def text_message(message: types.Message, state: FSMContext) -> None:
         current_state,
     )
 
-    await generic.text_message(user_id)
+    await generic.text_message(user_id, current_state)
 
 
 @dp.message_handler(state="*")
@@ -360,7 +374,7 @@ async def non_text_message(message: types.Message, state: FSMContext) -> None:
         current_state,
     )
 
-    await generic.text_message(user_id)
+    await generic.text_message(user_id, current_state)
 
 
 async def on_startup(disp: dispatcher.Dispatcher) -> None:

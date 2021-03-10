@@ -10,7 +10,7 @@ from bot.app import keyboard
 from bot.app.core import bot
 from bot.app.generic import onboarding
 
-from bot.app.keyboard import no_keyboard, select_urgent_keyboard, select_cancel_create
+from bot.app.keyboard import no_keyboard, select_urgent_keyboard, select_cancel_create, select_command
 from bot.app.bot_state import Form
 
 from bot.app.ticket import show_ticket, urgency_to_int
@@ -80,7 +80,7 @@ async def cancel(user_id: int) -> None:
         state (FSMContext): state for specific user
     """
     await Form.logged_in.set()
-    await bot.send_message(user_id, "И снова здравствуйте!")
+    await bot.send_message(user_id, "И снова здравствуйте!", reply_markup=select_command)
 
 
 async def list_all_tickets(user_id: int, state: FSMContext) -> None:
@@ -116,7 +116,7 @@ async def list_all_tickets(user_id: int, state: FSMContext) -> None:
                 chat_id=user_id,
                 # text=show_ticket(user_session.get_one_ticket(current_ticket)),
                 text=show_ticket(current_ticket),
-                reply_markup=no_keyboard,
+                reply_markup=select_command,
             )
         except glpi_api.GLPIError as err:
             logging.error("Ошибка %s", err)
@@ -202,7 +202,7 @@ async def process_to_select_priority(
         await bot.send_message(
             user_id,
             "Заявка не принята. Програма выдала ошибку",
-            reply_markup=no_keyboard,
+            reply_markup=select_command,
         )
         return
     try:
@@ -218,7 +218,7 @@ async def process_to_select_priority(
         await bot.send_message(
             user_id,
             "Заявка не принята. Неправильно выбран приоритет",
-            reply_markup=no_keyboard,
+            reply_markup=select_command,
         )
         return
 
@@ -232,7 +232,7 @@ async def process_to_select_priority(
         # message_text = f'Заявка "{title}" принята. Номер заявки - [{ticket_id}]({GLPI_TICKET_URL}{ticket_id})'
         message_text = f'Заявка "{title}" принята. Номер заявки - <a href="{GLPI_TICKET_URL}{ticket_id}">{ticket_id}</a>'
     logging.info(message_text)
-    await bot.send_message(user_id, message_text, reply_markup=no_keyboard)
+    await bot.send_message(user_id, message_text, reply_markup=select_command)
     await Form.logged_in.set()
 
 
@@ -297,7 +297,7 @@ async def repeat_ticket(
     else:
         message_text = f'Заявка "{title}" принята. Номер заявки - {ticket_id}'
     logging.info(message_text)
-    await bot.send_message(user_id, message_text, reply_markup=no_keyboard)
+    await bot.send_message(user_id, message_text, reply_markup=select_command)
     ddd = await bot.answer_callback_query(callback_id)
     logging.info("callback done %s", ddd)
 
@@ -318,7 +318,7 @@ async def refuse_solution(
 
     await Form.to_explain_decline.set()
     await bot.send_message(
-        user_id, "Заполните причину отклонения", reply_markup=no_keyboard
+        user_id, "Заполните причину отклонения", reply_markup=select_cancel_create
     )
     ddd = await bot.answer_callback_query(callback_id)
     logging.info("callback done %s", ddd)
@@ -340,7 +340,7 @@ async def process_to_explain_decline(
     result = user_session.refuse_ticket_solition(ticket_id, text)
     logging.info("user_session.refuse_ticket_solition = %s", result)
     await Form.logged_in.set()
-    await bot.send_message(user_id, "Принято", reply_markup=no_keyboard)
+    await bot.send_message(user_id, "Принято", reply_markup=select_command)
 
 
 async def refuse_solution_wrong_state(callback_id: str) -> None:
@@ -354,15 +354,19 @@ async def refuse_solution_wrong_state(callback_id: str) -> None:
 
 
 # UNKNOWN ==================================================================
-async def text_message(user_id: int) -> None:
+async def text_message(user_id: int, state: FSMContext) -> None:
     """React on something it cannot understand
 
     Args:
         user_id (int): telegram user id that issued command
     """
+    if state is None:
+        reply_markup = no_keyboard
+    else:
+        reply_markup = select_command
     await bot.send_message(user_id, get_quote(), reply_markup=no_keyboard)
     await bot.send_message(
         user_id,
         "К сожалению, наш робот Вас не понял. Попробуйте ещё раз или введите /help",
-        reply_markup=no_keyboard,
+        reply_markup=reply_markup,
     )
