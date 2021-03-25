@@ -240,7 +240,7 @@ async def list_all_tickets(message: types.Message, state: FSMContext) -> None:
     await generic.list_all_tickets(user_id=user_id, state=state)
 
 
-@dp.message_handler(commands=["cancel"], state=Form.to_enter_title)
+@dp.message_handler(commands=["Отмена"], state=Form.to_enter_title)
 async def cancel_message_1(message: types.Message, state: FSMContext) -> None:
     """Reacts on /cancel command in every state"""
     user_id: int = message.from_user.id

@@ -21,7 +21,7 @@ for value in URGENCY:
 select_cancel_create = ReplyKeyboardMarkup(
     resize_keyboard=True, one_time_keyboard=True
 )
-select_cancel_create.insert("/cancel")
+select_cancel_create.insert("/Отмена")
 
 select_command = ReplyKeyboardMarkup(
     resize_keyboard=True, one_time_keyboard=True
