@@ -26,8 +26,8 @@ select_cancel_create.insert("/Отмена")
 select_command = ReplyKeyboardMarkup(
     resize_keyboard=True, one_time_keyboard=True
 )
-select_command.insert("/Мои_заявки")
-select_command.insert("/Добавить")
+select_command.insert("/Мои заявки")
+select_command.insert("/Создать заявку")
 
 def select_approve_refuse(ticket_id: int) -> InlineKeyboardMarkup:
     """ Keyboard to approve or refuse ticket with ticket_id label """
