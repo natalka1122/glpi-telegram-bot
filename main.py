@@ -228,7 +228,7 @@ async def to_enter_password(message: types.Message, state: FSMContext) -> None:
 # =======================================================
 
 
-@dp.message_handler(commands=["tickets"], state=Form.logged_in)
+@dp.message_handler(commands=["Мои_заявки"], state=Form.logged_in)
 async def list_all_tickets(message: types.Message, state: FSMContext) -> None:
     """Reacts on /tickets command in every state"""
     user_id: int = message.from_user.id
@@ -251,7 +251,7 @@ async def cancel_message_1(message: types.Message, state: FSMContext) -> None:
     await generic.cancel(user_id=user_id)
 
 
-@dp.message_handler(commands=["cancel"], state=Form.to_enter_description)
+@dp.message_handler(commands=["Отмена"], state=Form.to_enter_description)
 async def cancel_message_2(message: types.Message, state: FSMContext) -> None:
     """Reacts on /cancel command in every state"""
     user_id: int = message.from_user.id
@@ -262,7 +262,7 @@ async def cancel_message_2(message: types.Message, state: FSMContext) -> None:
     await generic.cancel(user_id=user_id)
 
 
-@dp.message_handler(commands=["cancel"], state=Form.to_select_priority)
+@dp.message_handler(commands=["Отмена"], state=Form.to_select_priority)
 async def cancel_message_3(message: types.Message, state: FSMContext) -> None:
     """Reacts on /cancel command in every state"""
     user_id: int = message.from_user.id
@@ -273,7 +273,7 @@ async def cancel_message_3(message: types.Message, state: FSMContext) -> None:
     await generic.cancel(user_id=user_id)
 
 
-@dp.message_handler(commands=["cancel"], state=Form.to_explain_decline)
+@dp.message_handler(commands=["Отмена"], state=Form.to_explain_decline)
 async def cancel_message_4(message: types.Message, state: FSMContext) -> None:
     """Reacts on /cancel command in every state"""
     user_id: int = message.from_user.id
@@ -284,7 +284,7 @@ async def cancel_message_4(message: types.Message, state: FSMContext) -> None:
     await generic.cancel(user_id=user_id)
 
 
-@dp.message_handler(commands=["add"], state=Form.logged_in)
+@dp.message_handler(commands=["Добавить"], state=Form.logged_in)
 async def add_ticket(message: types.Message, state: FSMContext) -> None:
     """Reacts on /add command for logged user"""
     user_id: int = message.from_user.id
