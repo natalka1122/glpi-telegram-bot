@@ -104,7 +104,7 @@ async def list_all_tickets(user_id: int, state: FSMContext) -> None:
         logging.info(
             "User ID %d issued /tickets command and there are no tickets", user_id
         )
-        await bot.send_message(user_id, "Список заявок пуст", reply_markup=no_keyboard)
+        await bot.send_message(user_id, "Список заявок пуст", reply_markup=select_command)
         return
     logging.info("list_tickets = %s", list_tickets)
     logging.info("list_tickets = %s", list(enumerate(list_tickets)))
