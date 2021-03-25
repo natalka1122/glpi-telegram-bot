@@ -6,6 +6,7 @@ import bot.app.core as core
 from bot.usersession import UserSession
 from bot.glpi_api import GLPIError
 from bot.app.bot_state import Form
+from bot.app.keyboard import select_command
 
 
 async def onboarding_start(user_id: int) -> None:
@@ -18,6 +19,7 @@ async def onboarding_start(user_id: int) -> None:
     await core.bot.send_message(
         user_id,
         "Добрый день. Вас приветствует бот для быстрой подачи заявок в службу техподдержки. Введите Ваш логин в системе",
+        reply_markup=select_command,
     )
 
 
@@ -55,7 +57,8 @@ async def process_to_enter_password(
     try:
         await UserSession(user_id=user_id).create(state=state, password=password)
     except GLPIError as err:
-        logging.info("User ID %d tried to login to glpi. Error: %s", user_id, err)
+        logging.info(
+            "User ID %d tried to login to glpi. Error: %s", user_id, err)
         await process_cancel(
             user_id,
             state,

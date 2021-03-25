@@ -34,8 +34,8 @@ async def start_message(user_id: int, state: FSMContext) -> None:
         await Form.logged_in.set()
         await bot.send_message(
             user_id,
-            "Вы уж залогинены. Если хотите разлогинится, то введите /logout. Что бы увидеть все команды, введите /help",
-            reply_markup=no_keyboard,
+            "Вы ужe залогинены. Если хотите разлогинится, то введите /logout. Что бы увидеть все команды, введите /help",
+            reply_markup=select_command,
         )
         return
     logging.info("User ID %d is not logged in", user_id)
