@@ -18,7 +18,7 @@ async def onboarding_start(user_id: int) -> None:
     await Form.to_enter_login.set()
     await core.bot.send_message(
         user_id,
-        "Добрый день. Вас приветствует бот для быстрой подачи заявок в службу техподдержки. Введите Ваш логин в системе",
+        "Введите Ваш логин",
         reply_markup=no_keyboard,
     )
 
