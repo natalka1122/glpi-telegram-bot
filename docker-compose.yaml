@@ -13,5 +13,11 @@ services:
       # - LOG_LEVEL=${LOG_LEVEL}
 
     # Uncomment bellow to save state between container restart:
+    # volumes:
+    #   - ./telegram-bot:/data
     volumes:
-      - ./telegram-bot:/data
+      - data:/data
+
+volumes:
+  data:
+    driver: local
