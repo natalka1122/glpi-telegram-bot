@@ -13,10 +13,10 @@ services:
       # - LOG_LEVEL=${LOG_LEVEL}
 
     # Uncomment bellow to save state between container restart:
-    # volumes:
-    #   - ./telegram-bot:/data
     volumes:
       - data:/data
+    # Can use folder mount instead of volume
+    #   - ./telegram-bot:/data
 
 volumes:
   data:
