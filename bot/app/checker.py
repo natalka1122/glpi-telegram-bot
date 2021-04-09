@@ -5,7 +5,7 @@ import logging
 import asyncio
 import aiogram
 import aioschedule
-import config
+from config import CHECK_PERIOD, GLPI_TICKET_URL
 from bot.app.core import bot
 import bot.app.keyboard as keyboard
 from bot.db.dbhelper import DBHelper
@@ -60,28 +60,28 @@ def check_diff(
                 # messages[ticket_id] = f"Status: old = {old_status} new = {new_status}"
                 if new_status == 1:  # Новый
                     messages[ticket_id] = (
-                        f"Ваша заявка с номером {ticket_id} {name} пересоздана."
+                        f"Ваша заявка с номером <a href=\"{GLPI_TICKET_URL}{ticket_id}\">{ticket_id} {name}</a> пересоздана."
                         + f" Дата и время назначения: {date_mod}"
                     )
                 elif new_status == 2:  # В работе (назначена)
                     messages[ticket_id] = (
-                        f"Ваша заявка с номером {ticket_id} {name} назначена."
+                        f"Ваша заявка с номером <a href=\"{GLPI_TICKET_URL}{ticket_id}\">{ticket_id} {name}</a> назначена."
                         + f" Дата и время назначения: {date_mod}"
                     )
                 elif new_status == 3:  # В работе (запланирована)
                     messages[ticket_id] = (
-                        f"Ваша заявка с номером {ticket_id} {name} запланирована."
+                        f"Ваша заявка с номером <a href=\"{GLPI_TICKET_URL}{ticket_id}\">{ticket_id} {name}</a> запланирована."
                         + f" Дата и время изменения: {date_mod}"
                     )
                 elif new_status == 4:  # Ожидает ответа от заявителя
                     messages[ticket_id] = (
-                        f"Ваша заявка с номером {ticket_id} {name} ожидает ответа от заявителя."
+                        f"Ваша заявка с номером <a href=\"{GLPI_TICKET_URL}{ticket_id}\">{ticket_id} {name}</a> ожидает ответа от заявителя."
                         + f" Дата и время изменения: {date_mod}"
                     )
                 elif new_status == 5:  # Решена
                     solution: str = user_session.get_last_solution(ticket_id)
                     messages[ticket_id] = (
-                        f"По Вашей заявке с номером {ticket_id} {name} предложено решение: {solution}."
+                        f"По Вашей заявке с номером <a href=\"{GLPI_TICKET_URL}{ticket_id}\">{ticket_id} {name}</a> предложено решение: {solution}."
                         + "\n"
                         + f" Дата и время изменения: {date_mod}"
                     )
@@ -236,7 +236,7 @@ async def run_check(dbhelper: DBHelper) -> None:
 
 async def scheduler(dbhelper: DBHelper) -> None:
     """ Main scheduler for regilar ticket check """
-    aioschedule.every(config.CHECK_PERIOD).seconds.do(run_check, dbhelper=dbhelper)
+    aioschedule.every(CHECK_PERIOD).seconds.do(run_check, dbhelper=dbhelper)
     while True:
         await aioschedule.run_pending()
         await asyncio.sleep(1)
