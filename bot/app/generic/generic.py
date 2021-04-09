@@ -15,7 +15,7 @@ from bot.app.bot_state import Form
 
 from bot.app.ticket import show_ticket, urgency_to_int
 from bot.usersession import StupidError, UserSession
-from bot.app.quote_generator import get_quote
+# from bot.app.quote_generator import get_quote
 import bot.glpi_api as glpi_api
 from config import GLPI_TICKET_URL
 
@@ -364,7 +364,7 @@ async def text_message(user_id: int, state: FSMContext) -> None:
         reply_markup = no_keyboard
     else:
         reply_markup = select_command
-    await bot.send_message(user_id, get_quote(), reply_markup=no_keyboard)
+    # await bot.send_message(user_id, get_quote(), reply_markup=no_keyboard)
     await bot.send_message(
         user_id,
         "К сожалению, наш робот Вас не понял. Попробуйте ещё раз или введите /help",
