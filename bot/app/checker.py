@@ -4,12 +4,15 @@ import typing
 import logging
 import asyncio
 import aiogram
+from aiogram.dispatcher import FSMContext
 import aioschedule
 from config import CHECK_PERIOD, GLPI_TICKET_URL
 from bot.app.core import bot
 import bot.app.keyboard as keyboard
 from bot.db.dbhelper import DBHelper
 from bot.usersession import UserSession, StupidError
+from bot.glpi_api import GLPIError
+import bot.app.generic.generic as generic
 
 STATUS = "status"
 
@@ -54,9 +57,11 @@ def check_diff(
             new_status = new_ticket_dict[ticket_id].get(STATUS, None)
             if old_status != new_status:
                 name: str = (
-                    '"' + str(new_ticket_dict[ticket_id].get("name", None)) + '"'
+                    '"' +
+                    str(new_ticket_dict[ticket_id].get("name", None)) + '"'
                 )
-                date_mod: str = str(new_ticket_dict[ticket_id].get("date_mod", None))
+                date_mod: str = str(
+                    new_ticket_dict[ticket_id].get("date_mod", None))
                 # messages[ticket_id] = f"Status: old = {old_status} new = {new_status}"
                 if new_status == 1:  # Новый
                     messages[ticket_id] = (
@@ -75,15 +80,14 @@ def check_diff(
                     )
                 elif new_status == 4:  # Ожидает ответа от заявителя
                     messages[ticket_id] = (
-                        f"Ваша заявка с номером <a href=\"{GLPI_TICKET_URL}{ticket_id}\">{ticket_id} {name}</a> ожидает ответа от заявителя."
-                        + f" Дата и время изменения: {date_mod}"
+                        f"Ваша заявка с номером <a href=\"{GLPI_TICKET_URL}{ticket_id}\">{ticket_id} {name}</a>"
+                        + f" ожидает ответа от заявителя. Дата и время изменения: {date_mod}"
                     )
                 elif new_status == 5:  # Решена
                     solution: str = user_session.get_last_solution(ticket_id)
                     messages[ticket_id] = (
-                        f"По Вашей заявке с номером <a href=\"{GLPI_TICKET_URL}{ticket_id}\">{ticket_id} {name}</a> предложено решение: {solution}."
-                        + "\n"
-                        + f" Дата и время изменения: {date_mod}"
+                        f"По Вашей заявке с номером <a href=\"{GLPI_TICKET_URL}{ticket_id}\">{ticket_id} {name}</a>"
+                        + f" предложено решение: {solution}.\nДата и время изменения: {date_mod}"
                     )
                     proposed_solutions[ticket_id] = messages[ticket_id]
                     # TODO Add buttons
@@ -98,8 +102,10 @@ def check_diff(
                     logging.error(
                         "UNKNOWN STATUS: old = %s new = %s", old_status, new_status
                     )
-                    logging.error("old_ticket = %s", old_ticket_dict[ticket_id])
-                    logging.error("new_ticket = %s", new_ticket_dict[ticket_id])
+                    logging.error("old_ticket = %s",
+                                  old_ticket_dict[ticket_id])
+                    logging.error("new_ticket = %s",
+                                  new_ticket_dict[ticket_id])
         elif ticket_id in old_ticket_dict and ticket_id not in new_ticket_dict:
             logging.info("Deleted ticket: %s", old_ticket_dict[ticket_id])
             # TODO Think about it
@@ -207,20 +213,35 @@ async def run_check(dbhelper: DBHelper) -> None:
         old_tickets: typing.Dict[int, typing.Dict] = dbhelper.all_tickets_glpi(
             user_session.glpi_id
         )
-        new_tickets: typing.Dict[int, typing.Dict] = user_session.get_all_my_tickets(
-            open_only=False, full_info=False
+        try:
+            new_tickets: typing.Dict[int, typing.Dict] = user_session.get_all_my_tickets(
+                open_only=False, full_info=False
+            )
+        except GLPIError as err:
+            # logging.info(err.__dict__)
+            error_text = str(err)
+            logging.info("error_text = %s", error_text)
+            if "Incorrect username or password" in error_text:
+                await generic.logout(user_id, FSMContext(
+                    storage=dbhelper, chat=user_id, user=user_id))
+                continue
+            else:
+                raise
+
+        logging.debug(
+            "checker.run_check: old_tickets = %d %s", len(
+                old_tickets), old_tickets
         )
         logging.debug(
-            "checker.run_check: old_tickets = %d %s", len(old_tickets), old_tickets
-        )
-        logging.debug(
-            "checker.run_check: new_tickets = %d %s", len(new_tickets), new_tickets
+            "checker.run_check: new_tickets = %d %s", len(
+                new_tickets), new_tickets
         )
         messages, have_changes = check_diff(
             old_tickets, new_tickets, user_session=user_session
         )
         if have_changes:
-            dbhelper.write_tickets_glpi(glpi_id=user_session.glpi_id, data=new_tickets)
+            dbhelper.write_tickets_glpi(
+                glpi_id=user_session.glpi_id, data=new_tickets)
             logging.info("checker.run_check: messages = %s", messages)
             await process_messages(user_id, *messages)
 
